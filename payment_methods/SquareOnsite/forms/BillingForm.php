@@ -12,6 +12,7 @@ use EE_PMT_SquareOnsite;
 use EE_Registry;
 use EE_Template_Layout;
 use EE_Transaction;
+use EED_SquareOnsiteOAuth;
 use EEH_Money;
 use EEI_Payment;
 use EventEspresso\core\exceptions\InvalidDataTypeException;
@@ -65,9 +66,8 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
      */
     public function __construct(EE_Payment_Method $paymentMethod, array $options = [])
     {
-error_log('  BillingForm INIT...');
-// Check the token and refresh if needed.
-EED_SquareOnsiteOAuth::checkAndRefreshToken($paymentMethod);
+        // Check the token and refresh if needed.
+        EED_SquareOnsiteOAuth::checkAndRefreshToken($paymentMethod);
         // Don't initiate if there's no transaction.
         // This may occur on a partial payment when a PM page is loaded without Square (or any other payment) select.
         if (isset($options['transaction']) && $options['transaction'] instanceof EE_Transaction) {

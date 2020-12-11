@@ -144,6 +144,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             Domain::META_KEY_USING_OAUTH,
             true
         );
+        $squarePm->update_extra_meta('throttle_time', date("Y-m-d H:i:s"));
 
         // Write JS to pup-up window to close it and refresh the parent.
         EED_SquareOnsiteOAuth::closeOauthWindow('');
@@ -302,6 +303,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $squarePm->delete_extra_meta(Domain::META_KEY_MERCHANT_ID);
         $squarePm->delete_extra_meta(Domain::META_KEY_LIVE_MODE);
         $squarePm->update_extra_meta(Domain::META_KEY_USING_OAUTH, false);
+        $squarePm->delete_extra_meta('throttle_time');
 
         // Tell Square that the account has been disconnected.
         $postArgs = [
@@ -448,6 +450,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 Domain::META_KEY_USING_OAUTH,
                 true
             );
+            $squarePm->update_extra_meta('throttle_time', date("Y-m-d H:i:s"));
         }
     }
 
@@ -462,18 +465,32 @@ class EED_SquareOnsiteOAuth extends EED_Module
     {
         // Check if OAuthed first.
         if (EED_SquareOnsiteOAuth::isAuthenticated($squarePm)) {
+            // Throttle the requests a bit.
+            $now = new DateTime('now');
+            $throttleTimeMeta = $squarePm->get_extra_meta('throttle_time', true);
+            if ($throttleTimeMeta) {
+                $throttleTime = new DateTime($throttleTimeMeta);
+                $lastChecked = $now->diff($throttleTime)->format('%a');
+                // Allow only once a day.
+                if (intval($lastChecked) <= 1) {
+                    return false;
+                }
+            }
+            $squarePm->update_extra_meta('throttle_time', date("Y-m-d H:i:s"));
+
             // Now check the token's validation date.
             $expiresAtString = $squarePm->get_extra_meta(Domain::META_KEY_EXPIRES_AT, true);
             $expiresAt = new DateTime($expiresAtString);
-            $now = new DateTime('now');
             $timeLeft = $now->diff($expiresAt);
             $daysLeft = $timeLeft->format('%a');
 
             // Request a refresh if less than 5 days left.
-            if (intval($daysLeft) < 5) {
+            if (intval($daysLeft) <= 5) {
                 EED_SquareOnsiteOAuth::refreshToken($squarePm);
+                return true;
             }
         }
+        return false;
     }
 
 
