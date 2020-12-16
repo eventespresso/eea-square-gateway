@@ -52,7 +52,7 @@ jQuery(document).ready(function($) {
 				return;
 			}
 			// Ensure that the Square js class is loaded.
-			if (typeof SqPaymentForm === 'undefined' || eeaSquareParameters.appId) {
+			if (typeof SqPaymentForm === 'undefined' || ! eeaSquareParameters.appId) {
 				this.spco.offset_from_top_modifier = this.offsetFromTopModifier;
 				this.notification = this.spco.generate_message_object(
 					'',
