@@ -196,9 +196,12 @@ jQuery(document).ready(function($) {
 			this.paymentForm = this.submitPaymentButton.parents('form:first');
 			this.paymentForm.on('submit.eeaSquare', (e) => {
 				e.preventDefault();
-				this.submitPaymentButton.prop('disabled', true).addClass('spco-disabled-submit-btn');
-				// Request a nonce from the squarePaymentForm object
-				this.squarePaymentForm.requestCardNonce();
+				// First validate the form, so that the payment flow is not broken by SPCO form validation.
+				if (this.paymentForm.valid()) {
+					this.submitPaymentButton.prop('disabled', true).addClass('spco-disabled-submit-btn');
+					// Request a nonce from the squarePaymentForm object
+					this.squarePaymentForm.requestCardNonce();
+				}
 			});
 		};
 
@@ -281,7 +284,6 @@ jQuery(document).ready(function($) {
 			$('.hide-me-after-successful-payment-js').hide();
 			// Trigger click event on SPCO "Proceed to Next Step" button.
 			this.submitPaymentButton.parents('form:first').find('.spco-next-step-btn').trigger('click');
-
 			// Further verification is needed ?
 			this.spco.main_container.on('spco_process_response', (event, nextStep, response) => {
 				if (! response.success) {

@@ -471,8 +471,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
             if ($throttleTimeMeta) {
                 $throttleTime = new DateTime($throttleTimeMeta);
                 $lastChecked = $now->diff($throttleTime)->format('%a');
-                // Allow only once a day.
-                if (intval($lastChecked) <= 1) {
+                // Throttle, allowing only once per 3 days.
+                if (intval($lastChecked) < 3) {
                     return false;
                 }
             }

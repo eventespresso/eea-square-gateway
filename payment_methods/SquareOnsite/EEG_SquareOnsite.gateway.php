@@ -90,10 +90,10 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
             $theTransId = (! empty($transId)) ? $transId : uniqid();
             $preNum = substr(number_format(time() * rand(2, 99999), 0, '', ''), 0, 30);
             $keyPrefix = $this->_debug_mode ? 'TEST-payment' : 'event-payment';
-            $uniquePaymentKey = $keyPrefix . '-' . $preNum . '-' . $theTransId;
-            $idempotencyKey = $keyPrefix . '-' . $theTransId;
+            $idempotencyKey = $keyPrefix . '-' . $preNum . '-' . $theTransId;
+            $referenceId = $keyPrefix . '-' . $theTransId;
             // Save the gateway transaction details.
-            $payment->set_extra_accntng('Reference Id: ' . $uniquePaymentKey . ' Idempotency Key: ' . $idempotencyKey);
+            $payment->set_extra_accntng('Reference Id: ' . $referenceId . ' Idempotency Key: ' . $idempotencyKey);
 
             // Payment amount.
             $sqMoney = new Money();
@@ -109,7 +109,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
             );
             // Setup some payment parameters.
             $body->setAutocomplete(false);
-            $body->setReferenceId($uniquePaymentKey);
+            $body->setReferenceId($referenceId);
             $body->setNote($this->_get_gateway_formatter()->formatOrderDescription($payment));
             $paymentsApi = $sqClient->getPaymentsApi();
 
