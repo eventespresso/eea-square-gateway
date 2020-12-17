@@ -4,6 +4,7 @@ use Square\Models\CompletePaymentResponse;
 use Square\Models\Money;
 use Square\Models\CreatePaymentRequest;
 use Square\Models\CreatePaymentResponse;
+use Square\Models\Payment;
 use Square\SquareClient;
 use Square\Exceptions\ApiException;
 use Square\Environment;
@@ -43,7 +44,6 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      * @param EEI_Payment $payment
      * @param array       $billing_info
      * @return EE_Payment|EEI_Payment
-     * @throws ApiException
      */
     public function do_direct_payment($payment, $billing_info = [])
     {
@@ -92,8 +92,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
             $keyPrefix = $this->_debug_mode ? 'TEST-payment' : 'event-payment';
             $uniquePaymentKey = $keyPrefix . '-' . $preNum . '-' . $theTransId;
             $idempotencyKey = $keyPrefix . '-' . $theTransId;
-            // Save the gateway transaction ID.
-            $payment->set_txn_id_chq_nmbr($uniquePaymentKey);
+            // Save the gateway transaction details.
+            $payment->set_extra_accntng('Reference Id: ' . $uniquePaymentKey . ' Idempotency Key: ' . $idempotencyKey);
 
             // Payment amount.
             $sqMoney = new Money();
@@ -134,10 +134,10 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
                 $squarePayment = $result->getPayment();
                 $paymentStatus = $squarePayment->getStatus();
                 if ($paymentStatus === 'COMPLETED') {
-                    // Try getting the paid amount.
-                    $paidMoney = $squarePayment->getAmountMoney();
-                    $paidAmount = $paidMoney instanceof Money ? $paidMoney->getAmount() : false;
+                    $paidAmount = $this->getSquareAmount($squarePayment);
                     $payment = $this->setPaymentStatus($payment, $approvedStatus, $squarePayment, '', $paidAmount);
+                    // Save card details.
+                    $this->savePaymentDetails($payment, $squarePayment);
                     // Return as the payment is COMPLETE.
                     return $payment;
                 } elseif ($paymentStatus === 'APPROVED') {
@@ -147,10 +147,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
                         $completePaymentResult = $completeResponse->getResult();
                         // Make sure the result of the expected type.
                         if ($completePaymentResult instanceof CompletePaymentResponse) {
-                            // Try getting the paid amount.
                             $squareCompletePayment = $completePaymentResult->getPayment();
-                            $completePaidMoney = $squareCompletePayment->getAmountMoney();
-                            $paidAmount = $completePaidMoney instanceof Money ? $completePaidMoney->getAmount() : false;
+                            $paidAmount = $this->getSquareAmount($squareCompletePayment);
                             $payment = $this->setPaymentStatus(
                                 $payment,
                                 $approvedStatus,
@@ -158,6 +156,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
                                 '',
                                 $paidAmount
                             );
+                            // Save card details.
+                            $this->savePaymentDetails($payment, $squareCompletePayment);
                             // Return as the payment is COMPLETE.
                             return $payment;
                         }
@@ -234,5 +234,43 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
     public function convertToFloat($amount)
     {
         return $amount / pow(10, EE_PMT_SquareOnsite::getDecimalPlaces());
+    }
+
+
+    /**
+     * Gets the paid amount from a Square payment.
+     *
+     * @param Payment $payment
+     * @return boolean|int
+     */
+    public function getSquareAmount(Payment $payment)
+    {
+        // Try getting the paid amount.
+        $paidMoney = $payment->getAmountMoney();
+        return $paidMoney instanceof Money ? $paidMoney->getAmount() : false;
+    }
+
+
+    /**
+     * Gets and saves some basic payment details.
+     *
+     * @param EEI_Payment $eePayment
+     * @param Payment $squarePayment
+     * @return void
+     */
+    public function savePaymentDetails(EEI_Payment $eePayment, Payment $squarePayment)
+    {
+        // Save payment ID.
+        $eePayment->set_txn_id_chq_nmbr($squarePayment->getId());
+        // Save card details.
+        $cardDetails = $squarePayment->getCardDetails();
+        $cardUsed = $cardDetails->getCard();
+        $eePayment->set_details([
+            'card_brand' => $cardUsed->getCardBrand(),
+            'last_4' => $cardUsed->getLast4(),
+            'exp_month' => $cardUsed->getExpMonth(),
+            'exp_year' => $cardUsed->getExpYear(),
+            'cardholder_name' => $cardUsed->getCardholderName(),
+        ]);
     }
 }

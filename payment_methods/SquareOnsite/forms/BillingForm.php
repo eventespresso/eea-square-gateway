@@ -108,12 +108,12 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
                 'html_id' => 'square-onsite-billing-form',
                 'html_class' => 'squareOnsite_billingForm',
                 'subsections' => [
-                    'debug_content' => $this->addDebugContent($paymentMethod),
-                    'square_pm_form' => $this->squareEmbeddedForm(),
+                    'debug_content'    => $this->addDebugContent($paymentMethod),
+                    'square_pm_form'   => $this->squareEmbeddedForm(),
                     'eea_square_token' => new EE_Hidden_Input([
-                        'html_id' => 'eea-square-nonce',
+                        'html_id'   => 'eea-square-nonce',
                         'html_name' => 'EEA_squareToken',
-                        'default' => ''
+                        'default'   => ''
                     ]),
                 ]
             ]
@@ -136,7 +136,7 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
             return new EE_Form_Section_Proper([
                 'layout_strategy' => new EE_Template_Layout([
                     'layout_template_file' => $this->template_path . 'squareDebugInfo.template.php',
-                    'template_args' => []
+                    'template_args'        => []
                 ])
             ]);
         }
@@ -156,7 +156,7 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
         return new EE_Form_Section_Proper([
             'layout_strategy' => new EE_Template_Layout([
                 'layout_template_file' => $this->template_path . 'squareEmbeddedForm.template.php',
-                'template_args' => $template_args
+                'template_args'        => $template_args
             ])
         ]);
     }
@@ -199,7 +199,7 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
             'currencySign'      => EE_Registry::instance()->CFG->currency->sign,
             'payAmount'         => $payAmount,
             // The transaction ID is only used for logging errors.
-            'txnId' => $this->transaction instanceof EE_Transaction ? $this->transaction->ID() : 0,
+            'txnId'             => $this->transaction instanceof EE_Transaction ? $this->transaction->ID() : 0,
             'noSPCOError'         => esc_html__(
                 // @codingStandardsIgnoreStart
                 'It appears the Single Page Checkout javascript was not loaded properly! Please refresh the page and try again or contact support.',
