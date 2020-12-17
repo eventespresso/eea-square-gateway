@@ -39,14 +39,30 @@
     </div>
 
     <h4><?php esc_html_e('How do I test specific error codes?', 'event_espresso'); ?></h4>
-    <ul>
-        <li><strong>4000000000000341</strong> - <?php esc_html_e(
-            'charge fail; Attaching this card will succeed, but attempts to charge the customer will fail.',
-            'event_espresso'
-        ); ?></li>
-        <li><strong>4000000000000002</strong> - <?php esc_html_e(
-            'card_declined; Use this special card number.',
-            'event_espresso'
-        ); ?></li>
-    </ul>
+        <table id="square-test-errors" class="test-card-errors">
+            <thead>
+                <tr>
+                    <td><?php esc_html_e('Desired error state', 'event_espresso'); ?></td>
+                    <td><?php esc_html_e('Test values', 'event_espresso'); ?></td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><?php esc_html_e('Card CVV incorrect', 'event_espresso'); ?></td>
+                    <td>CVV: 911</td>
+                </tr>
+                <tr>
+                    <td><?php esc_html_e('Card postal code incorrect', 'event_espresso'); ?></td>
+                    <td>Postal code: 99999</td>
+                </tr>
+                <tr>
+                    <td><?php esc_html_e('Card declined number', 'event_espresso'); ?></td>
+                    <td>Card number: 4000000000000002</td>
+                </tr>
+                <tr>
+                    <td><?php esc_html_e('Card on file auth declined', 'event_espresso'); ?></td>
+                    <td>PAN: 4000000000000010</td>
+                </tr>
+            </tbody>
+        </table>
 </div>

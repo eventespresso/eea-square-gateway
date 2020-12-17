@@ -238,7 +238,6 @@ jQuery(document).ready(function($) {
 					squareInstance.txnData = response;
 					// Now build the PM form.
 					squareInstance.buildSquarePaymentForm();
-					console.log('TXN set');
 				},
 				error: function() {
 					SPCO.end_ajax();
