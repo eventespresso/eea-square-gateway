@@ -55,8 +55,7 @@ class Domain
     const META_KEY_MERCHANT_ID = 'merchant_id';
 
     /*
-     * Name of the Extra Meta that stores the ID of the Square Account that authorized the EE Square client to access
-     * Square on its behalf.
+     * Name of the Extra Meta that stores the Square account location ID.
      */
-    // const META_KEY_SQUARE_USER_ID = 'square_user_id';
+    const META_KEY_LOCATION_ID = 'location_id';
 }

@@ -69,6 +69,15 @@ class SettingsForm extends EE_Payment_Method_Form
                     'html_id'         => $pmInstance->slug() . '-access-token',
                     'required'        => true,
                 ]),
+                Domain::META_KEY_LOCATION_ID => new EE_Text_Input([
+                    'html_label_text' => sprintf(
+                        // translators: %1$s: Help tab link as icon.
+                        esc_html__('Location ID %1$s', 'event_espresso'),
+                        $paymentMethod->get_help_tab_link()
+                    ),
+                    'html_id'         => $pmInstance->slug() . '-location-id',
+                    'required'        => true,
+                ]),
             ]
         ];
         // Build the PM form.
@@ -181,11 +190,13 @@ class SettingsForm extends EE_Payment_Method_Form
     {
         $appId = $this->get_input(Domain::META_KEY_APPLICATION_ID);
         $accessToken = $this->get_input(Domain::META_KEY_ACCESS_TOKEN);
+        $locationId = $this->get_input(Domain::META_KEY_LOCATION_ID);
         $authType = $this->get_input_value(Domain::META_KEY_AUTH_TYPE);
         // If 'OAuth' option is selected, discard the app ID and access token fields in case they are empty.
         if ($authType === 'oauth') {
             $appId->disable();
             $accessToken->disable();
+            $locationId->disable();
         }
     }
 }

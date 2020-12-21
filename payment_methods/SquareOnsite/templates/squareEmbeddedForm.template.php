@@ -10,6 +10,11 @@
  */
 ?>
 <div id="eea-square-pm-form-div">
+    <!-- GooglePay button -->
+    <button id="eea-sq-google-pay" class="button-google-pay sq-input"></button>
+    <!-- ApplePay button -->
+    <button class="apple-pay-button apple-pay-button-black" id="eea-sq-apple-pay sq-input"></button>
+
     <div id="sq-card-se"></div>
     <input type="submit" id="eea-square-pay-button" class="button-credit-card" value="<?php esc_html_e('Pay', 'event_espresso');?>" style="display: none;">
 

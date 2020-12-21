@@ -50,6 +50,7 @@ jQuery(document).ready(function($) {
 		this.disconnectBtnId = '#eea_square_disconnect_btn_' + this.slug;
 		this.appIdFieldId = '#' + this.slug + '-app-id';
 		this.accessTokenFieldId = '#' + this.slug + '-access-token';
+		this.locationIdFieldId = '#' + this.slug + '-location-id';
 		this.authenticationFieldId = '#' + this.slug + '-authentication';
 		this.connectSection = 'eea-connect-section-' + this.slug;
 		this.disconnectSection = 'eea-disconnect-section-' + this.slug;
@@ -216,13 +217,16 @@ jQuery(document).ready(function($) {
 		this.hideNonApplicableInputs = function(target) {
 			const appIdInput = target.parents('form').find(this.appIdFieldId).closest('tr');
 			const accessTokenInput = target.parents('form').find(this.accessTokenFieldId).closest('tr');
+			const locationIdInput = target.parents('form').find(this.locationIdFieldId).closest('tr');
 
 			if (target.val() === 'personal') {
 				appIdInput.css('display', 'table-row');
 				accessTokenInput.css('display', 'table-row');
+				locationIdInput.css('display', 'table-row');
 			} else {
 				appIdInput.css('display', 'none');
 				accessTokenInput.css('display', 'none');
+				locationIdInput.css('display', 'none');
 			}
 		};
 

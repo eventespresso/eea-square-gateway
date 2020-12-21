@@ -7,6 +7,7 @@ use EE_Error;
 use EE_Form_Section_HTML;
 use EE_Form_Section_Proper;
 use EE_Hidden_Input;
+use EE_Organization_Config;
 use EE_Payment_Method;
 use EE_PMT_SquareOnsite;
 use EE_Registry;
@@ -85,7 +86,7 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
                 );
             }
 
-            $this->squareOnsitePmt = $options['square_onsite_pmt'];
+            $this->squareOnsitePmt = $paymentMethod;
             $this->transaction = isset($options['transaction']) ? $options['transaction'] : null;
             $this->template_path = $options['template_path'];
             EE_Registry::instance()->load_helper('Money');
@@ -171,13 +172,12 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
      */
     public function enqueue_js()
     {
-        wp_enqueue_script(
-            'eea_square_js_lib',
-            'https://js.squareupsandbox.com/v2/paymentform',
-            ['single_page_checkout'],
-            false,
-            true
-        );
+        // Scripts.
+        $scriptsUrl = 'https://js.squareup.com/v2/paymentform';
+        if ($this->squareOnsitePmt->debug_mode()) {
+            $scriptsUrl = 'https://js.squareupsandbox.com/v2/paymentform';
+        }
+        wp_enqueue_script('eea_square_js_lib', $scriptsUrl, ['single_page_checkout'], false, true);
         wp_enqueue_script(
             'eea_square_pm_js',
             EEA_SQUARE_GATEWAY_PLUGIN_URL . 'assets/js/square-payments.js',
@@ -186,20 +186,33 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
             true
         );
 
+        // Styles.
+        wp_enqueue_style(
+            'eea_square_payment_form_styles',
+            EEA_SQUARE_GATEWAY_PLUGIN_URL . 'assets' . DS . 'css' . DS . 'eea-square-payment-form.css',
+            [],
+            EEA_SQUARE_GATEWAY_VERSION
+        );
+
         // Convert money for a display format.
-        $payAmount = EE_PMT_SquareOnsite::getDecimalPlaces()
-            ? number_format($this->payAmount, 2, '.', '')
-            : $this->payAmount;
+        $decimalPlaces = EE_PMT_SquareOnsite::getDecimalPlaces();
+        $orgCountry = isset(EE_Registry::instance()->CFG->organization)
+                   && EE_Registry::instance()->CFG->organization instanceof EE_Organization_Config
+            ? EE_Registry::instance()->CFG->organization->CNT_ISO
+            : '';
         $squareParameters = [
             'appId'             => $this->_pm_instance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true),
             'accessToken'       => $this->_pm_instance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true),
+            'locationId'        => $this->_pm_instance->get_extra_meta(Domain::META_KEY_LOCATION_ID, true),
             'paymentMethodSlug' => $this->_pm_instance->slug(),
             'paymentCurrency'   => EE_Registry::instance()->CFG->currency->code,
             'payButtonText'     => esc_html__('Pay', 'event_espresso'),
             'currencySign'      => EE_Registry::instance()->CFG->currency->sign,
-            'payAmount'         => $payAmount,
             // The transaction ID is only used for logging errors.
             'txnId'             => $this->transaction instanceof EE_Transaction ? $this->transaction->ID() : 0,
+            'orgCountry'        => $orgCountry,
+            'decimalPlaces'     => $decimalPlaces,
+            'siteName'          => get_bloginfo('name'),
             'noSPCOError'         => esc_html__(
                 // @codingStandardsIgnoreStart
                 'It appears the Single Page Checkout javascript was not loaded properly! Please refresh the page and try again or contact support.',

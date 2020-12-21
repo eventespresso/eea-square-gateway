@@ -11,8 +11,8 @@ jQuery(document).ready(function($) {
 	 *		paymentMethodSlug: string,
 	 *		paymentCurrency: string,
 	 *		payButtonText: string,
+	 *		orgCountry: string,
 	 *		currencySign: string,
-	 *		payAmount: float,
 	 *		txnId: int,
      *		noSPCOError: string
 	 *		noSquareError: string,
@@ -23,6 +23,7 @@ jQuery(document).ready(function($) {
 	function EeaSquarePayments() {
 		this.submitButtonId = '#eea-square-pay-button';
 		this.paymentFormId = '#eea-square-pm-form-div';
+		this.billingFormId = '#square-onsite-billing-form';
 		this.offsetFromTopModifier = -400;
 		this.paymentMethodSelector = {};
 		this.paymentMethodInfoDiv = {};
@@ -39,6 +40,19 @@ jQuery(document).ready(function($) {
 		this.spco = window.SPCO || null;
 		this.paymentForm = {};
 		this.squarePaymentForm = {};
+		this.squareDigitalWallet = {};
+		this.billingForm = {};
+		this.billFirstName = {};
+		this.billLastName = {};
+		this.billEmail = {};
+		this.billAddress = {};
+		this.billAddress2 = {};
+		this.billCity = {};
+		this.billState = {};
+		this.billCountry = {};
+		this.billZip = {};
+		this.billPhone = {};
+		this.payAmount = 0;
 
 		/**
 		 * @function initialize
@@ -92,6 +106,30 @@ jQuery(document).ready(function($) {
 			this.paymentMethodInfoDiv = $('#spco-payment-method-info-squareonsite');
 			this.paymentNonceInput = $('#eea-square-nonce');
 			this.txnId = eeaSquareParameters.txnId;
+			this.billingForm = $(this.billingFormId);
+			// Billing data.
+			if (typeof this.billingForm !== 'undefined') {
+				this.billFirstName = this.billingForm.find(
+					'input[id*="billing-form-first-namde"]:visible');
+				this.billLastName = this.billingForm.find(
+					'input[id*="billing-form-last-name"]:visible');
+				this.billEmail = this.billingForm.find(
+					'input[id*="billing-form-email"]:visible');
+				this.billAddress = this.billingForm.find(
+					'input[id*="billing-form-address"]:visible');
+				this.billAddress2 = this.billingForm.find(
+					'input[id*="billing-form-address2"]:visible');
+				this.billCity = this.billingForm.find(
+					'input[id*="billing-form-city"]:visible');
+				this.billState = this.billingForm.find(
+					'input[id*="billing-form-state"]:visible');
+				this.billCountry = this.billingForm.find(
+					'input[id*="billing-form-country"]:visible');
+				this.billZip = this.billingForm.find(
+					'input[id*="billing-form-zip"]:visible');
+				this.billPhone = this.billingForm.find(
+					'input[id*="billing-form-phone"]:visible');
+			}
 		};
 
 		/**
@@ -103,6 +141,9 @@ jQuery(document).ready(function($) {
 			// Create and initialize a payment form object.
 			if (SqPaymentForm.isSupportedBrowser()) {
 				let squareInstance = this;
+				/**
+				 * Single-element payment form.
+ 				 */
 				this.squarePaymentForm = new SqPaymentForm({
 					// Initialize the payment form elements.
 					applicationId: eeaSquareParameters.appId,
@@ -152,24 +193,79 @@ jQuery(document).ready(function($) {
 						unsupportedBrowserDetected: squareInstance.unsupportedBrowser.bind(squareInstance),
 					}
 				});
-
+				// Build the single-element form.
 				this.squarePaymentForm.build((error, result) => {
 					if (error) {
 						this.paymentError(error);
 					}
 				});
+
+
+				/**
+				 * The Digital Wallet buttons.
+ 				 */
+				this.squareDigitalWallet = new SqPaymentForm({
+					applicationId: eeaSquareParameters.appId,
+					locationId: eeaSquareParameters.locationId,
+					inputClass: 'sq-input',
+					autoBuild: false,
+					// Initialize Google Pay button ID.
+					googlePay: {
+						elementId: 'eea-sq-google-pay'
+					},
+					// Initialize Apple Pay placeholder ID.
+					applePay: {
+						elementId: 'eea-sq-apple-pay'
+					},
+					// Call back functions.
+					callbacks: {
+						// Customize the createPaymentRequest callback function.
+						createPaymentRequest: squareInstance.createWalletPayment.bind(squareInstance),
+						methodsSupported: squareInstance.enableWallet.bind(squareInstance),
+						// Triggered when: squarePaymentForm completes a card
+						// nonce request through Google Pay or Apple Pay.
+						cardNonceResponseReceived: squareInstance.handleSquareResponse.bind(squareInstance),
+					}
+				});
+				// Build the Digital Wallet form.
+				this.squareDigitalWallet.build((error, result) => {
+					if (error) {
+						this.paymentError(error);
+					}
+				});
+
 				// Set the right amount on the button.
 				$(this.submitButtonId).val(
 					eeaSquareParameters.payButtonText
 					+ ' ' + eeaSquareParameters.currencySign
-					+ this.txnData.payment_amount
+					+ this.payAmount
 				);
+
 				// Show the Pay button if the payment form generated ok.
 				this.submitPaymentButton.show();
 				this.spco.end_ajax();
 			} else {
 				this.hideSquare();
 				this.displayError(eeaSquareParameters.browserNotSupported);
+			}
+		};
+
+		this.enableWallet = function(methods, unsupportedReason) {
+			console.log('methodsSupported: ', methods);
+			const googlePayBtn = document.getElementById('eea-sq-google-pay');
+			const applePayBtn = document.getElementById('eea-sq-apple-pay');
+
+			// Only show the button if Google Pay on the Web is enabled.
+			if (methods.googlePay === true) {
+				googlePayBtn.style.display = 'inline-block';
+			} else if(unsupportedReason) {
+				console.log('unsupportedReason Gp:', unsupportedReason);
+			}
+			// Same for ApplePay.
+			if (methods.applePay === true) {
+				applePayBtn.style.display = 'inline-block';
+			} else if(unsupportedReason) {
+				console.log('unsupportedReason Ap:', unsupportedReason);
 			}
 		};
 
@@ -235,7 +331,11 @@ jQuery(document).ready(function($) {
 					if (response['error'] || typeof response['TXN_ID'] == 'undefined' || response['TXN_ID'] == null) {
 						return SPCO.submit_reg_form_server_error();
 					}
+					// Save transaction data.
 					squareInstance.txnData = response;
+					// Set the payment amount.
+					squareInstance.payAmount = squareInstance.txnData.payment_amount.toFixed(eeaSquareParameters.decimalPlaces);
+
 					// Now build the PM form.
 					squareInstance.buildSquarePaymentForm();
 				},
@@ -258,6 +358,40 @@ jQuery(document).ready(function($) {
 			} else {
 				this.paymentSuccess(nonce, cardData);
 			}
+		};
+
+		/**
+		 * @function createWalletPayment
+		 * @return object
+		 */
+		this.createWalletPayment = function() {
+			const paymentRequestJson = {
+				requestShippingAddress: false,
+				requestBillingInfo: true,
+				shippingContact: {
+					familyName: this.billLastName,
+					givenName: this.billFirstName,
+					email: this.billEmail,
+					country: this.billCountry,
+					region: this.billState,
+					city: this.billCity,
+					addressLines: [
+						this.billAddress,
+						this.billAddress2
+					],
+					postalCode: this.billZip,
+					phone: this.billPhone
+				},
+				currencyCode: eeaSquareParameters.paymentCurrency,
+				countryCode: eeaSquareParameters.orgCountry,
+				total: {
+					label: eeaSquareParameters.siteName,
+					amount: this.payAmount,
+					pending: false
+				}
+			};
+
+			return paymentRequestJson;
 		};
 
 		/**

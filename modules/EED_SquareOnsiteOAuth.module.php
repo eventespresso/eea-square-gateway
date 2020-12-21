@@ -99,6 +99,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             $_GET[ Domain::META_KEY_REFRESH_TOKEN ],
             $_GET[ Domain::META_KEY_APPLICATION_ID ],
             $_GET[ Domain::META_KEY_LIVE_MODE ],
+            $_GET[ Domain::META_KEY_LOCATION_ID ],
         )
             || ! wp_verify_nonce($_GET['nonce'], 'eea_square_grab_access_token')
         ) {
@@ -145,6 +146,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
             true
         );
         $squarePm->update_extra_meta('throttle_time', date("Y-m-d H:i:s"));
+        $squarePm->update_extra_meta(
+            Domain::META_KEY_LOCATION_ID,
+            sanitize_text_field($_GET[ Domain::META_KEY_LOCATION_ID ])
+        );
 
         // Write JS to pup-up window to close it and refresh the parent.
         EED_SquareOnsiteOAuth::closeOauthWindow('');
@@ -302,6 +307,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $squarePm->delete_extra_meta(Domain::META_KEY_REFRESH_TOKEN);
         $squarePm->delete_extra_meta(Domain::META_KEY_MERCHANT_ID);
         $squarePm->delete_extra_meta(Domain::META_KEY_LIVE_MODE);
+        $squarePm->delete_extra_meta(Domain::META_KEY_LOCATION_ID);
         $squarePm->update_extra_meta(Domain::META_KEY_USING_OAUTH, false);
         $squarePm->delete_extra_meta('throttle_time');
 
@@ -418,6 +424,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
                     $responseBody->access_token,
                     $responseBody->refresh_token,
                     $responseBody->merchant_id,
+                    $responseBody->location_id,
                 )
             ) {
                 // This is an error.
@@ -433,6 +440,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
             $squarePm->update_extra_meta(
                 Domain::META_KEY_ACCESS_TOKEN,
                 sanitize_text_field($responseBody->access_token)
+            );
+            $squarePm->update_extra_meta(
+                Domain::META_KEY_LOCATION_ID,
+                sanitize_text_field($responseBody->application_id)
             );
             $squarePm->update_extra_meta(
                 Domain::META_KEY_REFRESH_TOKEN,
