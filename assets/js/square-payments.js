@@ -221,7 +221,8 @@ jQuery(document).ready(function($) {
 					callbacks: {
 						// Customize the createPaymentRequest callback function.
 						createPaymentRequest: squareInstance.createWalletPayment.bind(squareInstance),
-						methodsSupported: squareInstance.enableWallet.bind(squareInstance),
+						// Enable the buttons if supported.
+						methodsSupported: squareInstance.enableDigitalWallet.bind(squareInstance),
 						// Triggered when: squarePaymentForm completes a card
 						// nonce request through Google Pay or Apple Pay.
 						cardNonceResponseReceived: squareInstance.handleSquareResponse.bind(squareInstance),
@@ -250,23 +251,27 @@ jQuery(document).ready(function($) {
 			}
 		};
 
-		this.enableWallet = function(methods, unsupportedReason) {
-			console.log('methodsSupported: ', methods);
+		/**
+		 * @function enableDigitalWallet
+		 */
+		this.enableDigitalWallet = function(methods, unsupportedReason) {
 			const googlePayBtn = document.getElementById('eea-sq-google-pay');
 			const applePayBtn = document.getElementById('eea-sq-apple-pay');
 
 			// Only show the button if Google Pay on the Web is enabled.
 			if (methods.googlePay === true) {
 				googlePayBtn.style.display = 'inline-block';
-			} else if(unsupportedReason) {
-				console.log('unsupportedReason Gp:', unsupportedReason);
 			}
+			// else if(unsupportedReason) {
+			// 	console.log('Google Pay not supported:', unsupportedReason);
+			// }
 			// Same for ApplePay.
 			if (methods.applePay === true) {
 				applePayBtn.style.display = 'inline-block';
-			} else if(unsupportedReason) {
-				console.log('unsupportedReason Ap:', unsupportedReason);
 			}
+			// else if(unsupportedReason) {
+			// 	console.log('Apple Pay not supported:', unsupportedReason);
+			// }
 		};
 
 		/**
@@ -365,6 +370,11 @@ jQuery(document).ready(function($) {
 		 * @return object
 		 */
 		this.createWalletPayment = function() {
+			// Check the form before proceeding.
+			if (! this.paymentForm.valid()) {
+				return false;
+			}
+			// Ok, now create the payment for the Apple/Google Pay.
 			const paymentRequestJson = {
 				requestShippingAddress: false,
 				requestBillingInfo: true,
