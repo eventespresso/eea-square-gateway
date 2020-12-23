@@ -8,6 +8,7 @@ use EE_PMT_SquareOnsite;
 use EE_Payment_Method;
 use EE_Select_Input;
 use EE_Text_Input;
+use EE_Yes_No_Input;
 use EventEspresso\Square\domain\Domain;
 use EE_Error;
 use EE_Form_Section_HTML;
@@ -69,6 +70,24 @@ class SettingsForm extends EE_Payment_Method_Form
                     'html_id'         => $pmInstance->slug() . '-access-token',
                     'required'        => true,
                 ]),
+                Domain::META_KEY_USE_DIGITAL_WALLET => new EE_Yes_No_Input(
+                    [
+                        'html_label_text' => sprintf(
+                            // translators: %1$s: Help tab link as icon.
+                            esc_html__('Enable Digital Wallet ? %s', 'event_espresso'),
+                            $paymentMethod->get_help_tab_link()
+                        ),
+                        'html_help_text'  => esc_html__(
+                            // @codingStandardsIgnoreStart
+                            'Would you like to enable Google Pay and Apple Pay as payment options on the checkout page ?',
+                            // @codingStandardsIgnoreEnd
+                            'event_espresso'
+                        ),
+                        'html_id'         => $pmInstance->slug() . '-use-dwallet',
+                        'default'         => false,
+                        'required'        => true,
+                    ]
+                ),
                 Domain::META_KEY_LOCATION_ID => new EE_Text_Input([
                     'html_label_text' => sprintf(
                         // translators: %1$s: Help tab link as icon.
@@ -191,11 +210,16 @@ class SettingsForm extends EE_Payment_Method_Form
         $appId = $this->get_input(Domain::META_KEY_APPLICATION_ID);
         $accessToken = $this->get_input(Domain::META_KEY_ACCESS_TOKEN);
         $locationId = $this->get_input(Domain::META_KEY_LOCATION_ID);
+        $useDwallet = $this->get_input_value(Domain::META_KEY_USE_DIGITAL_WALLET);
         $authType = $this->get_input_value(Domain::META_KEY_AUTH_TYPE);
         // If 'OAuth' option is selected, discard the app ID and access token fields in case they are empty.
         if ($authType === 'oauth') {
             $appId->disable();
             $accessToken->disable();
+            $locationId->disable();
+        }
+        // Location ID is only required for the Digital Wallet.
+        if (! $useDwallet) {
             $locationId->disable();
         }
     }

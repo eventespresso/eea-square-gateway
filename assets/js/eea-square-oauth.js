@@ -51,6 +51,7 @@ jQuery(document).ready(function($) {
 		this.appIdFieldId = '#' + this.slug + '-app-id';
 		this.accessTokenFieldId = '#' + this.slug + '-access-token';
 		this.locationIdFieldId = '#' + this.slug + '-location-id';
+		this.useDwalletId = '#' + this.slug + '-use-dwallet';
 		this.authenticationFieldId = '#' + this.slug + '-authentication';
 		this.connectSection = 'eea-connect-section-' + this.slug;
 		this.disconnectSection = 'eea-disconnect-section-' + this.slug;
@@ -208,24 +209,58 @@ jQuery(document).ready(function($) {
 					console.log(squareParams.unknownContainer);
 				}
 			});
-			this.hideNonApplicableInputs(this.form.parents('form').find(this.authenticationFieldId));
+
+			this.toggleNonApplicableInputs(this.form.parents('form').find(this.authenticationFieldId));
+			// Change listener for the Authentication type select.
 			$(this.authenticationFieldId).change(function(event) {
-				suqarePmInstance.hideNonApplicableInputs($(event.target));
+				suqarePmInstance.toggleNonApplicableInputs($(event.target));
+			});
+			// Change listener for the Digital Wallet toggle.
+			$(this.useDwalletId).change(function(event) {
+				suqarePmInstance.toggleDwalletInputs($(event.target));
 			});
 		};
 
-		this.hideNonApplicableInputs = function(target) {
+		/**
+		 * Show/Hide the non OAuth inputs.
+		 * @function
+		 */
+		this.toggleNonApplicableInputs = function(target) {
 			const appIdInput = target.parents('form').find(this.appIdFieldId).closest('tr');
 			const accessTokenInput = target.parents('form').find(this.accessTokenFieldId).closest('tr');
 			const locationIdInput = target.parents('form').find(this.locationIdFieldId).closest('tr');
+			const digitalWalletInput = target.parents('form').find(this.useDwalletId).closest('tr');
+			const digitalWalletToggle = target.parents('form').find(this.useDwalletId);
 
 			if (target.val() === 'personal') {
 				appIdInput.css('display', 'table-row');
 				accessTokenInput.css('display', 'table-row');
-				locationIdInput.css('display', 'table-row');
+				digitalWalletInput.css('display', 'table-row');
+				// Double check the Digital Wallet toggle.
+				if (digitalWalletToggle.val() === '1') {
+					locationIdInput.css('display', 'table-row');
+				} else {
+					locationIdInput.css('display', 'none');
+				}
 			} else {
 				appIdInput.css('display', 'none');
 				accessTokenInput.css('display', 'none');
+				locationIdInput.css('display', 'none');
+				digitalWalletInput.css('display', 'none');
+			}
+		};
+
+		/**
+		 * Show/Hide the Digital Wallet inputs.
+		 * @function
+		 */
+		this.toggleDwalletInputs = function(target) {
+			const locationIdInput = target.parents('form').find(this.locationIdFieldId).closest('tr');
+
+			// Hide the Digital Wallet required inputs.
+			if (target.val() === '1') {
+				locationIdInput.css('display', 'table-row');
+			} else {
 				locationIdInput.css('display', 'none');
 			}
 		};

@@ -32,6 +32,12 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
     protected $_access_token = null;
 
     /**
+     * Square Application Location ID.
+     * @var string
+     */
+    protected $_use_dwallet = null;
+
+    /**
      * Currencies supported by this gateway.
      * @var array
      */

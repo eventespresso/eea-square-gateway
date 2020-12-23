@@ -58,4 +58,9 @@ class Domain
      * Name of the Extra Meta that stores the Square account location ID.
      */
     const META_KEY_LOCATION_ID = 'location_id';
+
+    /*
+     * Name of the Extra Meta that stores the option for enabling the Square Digital Wallet (Google Pay and Apple Pay).
+     */
+    const META_KEY_USE_DIGITAL_WALLET = 'use_dwallet';
 }

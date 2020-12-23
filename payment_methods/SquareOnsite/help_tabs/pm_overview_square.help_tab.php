@@ -42,4 +42,15 @@
             'event_espresso'
         ); ?>
     </li>
+    <li>
+        <strong><?php esc_html_e('Location ID', 'event_espresso'); ?></strong><br />
+        <?php printf(
+            esc_html__(
+                'The "Location ID" of your Square application. It can be found in the %1$sSeller Dashboard%2$s, Accounts & Settings > Locations in the Business drop-down list in the left pane.',
+                'event_espresso'
+            ),
+            '<a href="https://squareup.com/dashboard">',
+            '</a>'
+        ); ?>
+    </li>
 </ul>
