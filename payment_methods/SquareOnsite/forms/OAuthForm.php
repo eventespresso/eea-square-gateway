@@ -115,7 +115,9 @@ class OAuthForm extends EE_Form_Section_Proper
                 // translators: %1$s: Help tab link as icon.
                 esc_html__('Square OAuth: %1$s *', 'event_espresso'),
                 $this->paymentMethod->get_help_tab_link()
-            )
+            ),
+            'eea_square_oauth_section_' . $this->pmSlug,
+            'eea-square-oauth-section'
         );
 
         // Is this a test connection ?

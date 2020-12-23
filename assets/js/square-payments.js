@@ -8,6 +8,8 @@ jQuery(document).ready(function($) {
 	 * @type {{
 	 *		appId: string,
 	 *		accessToken: string,
+	 *		locationId: string,
+	 *		useDigitalWallet: string,
 	 *		paymentMethodSlug: string,
 	 *		paymentCurrency: string,
 	 *		payButtonText: string,
@@ -203,37 +205,40 @@ jQuery(document).ready(function($) {
 
 				/**
 				 * The Digital Wallet buttons.
+				 * Do check if this option is enabled.
  				 */
-				this.squareDigitalWallet = new SqPaymentForm({
-					applicationId: eeaSquareParameters.appId,
-					locationId: eeaSquareParameters.locationId,
-					inputClass: 'sq-input',
-					autoBuild: false,
-					// Initialize Google Pay button ID.
-					googlePay: {
-						elementId: 'eea-sq-google-pay'
-					},
-					// Initialize Apple Pay placeholder ID.
-					applePay: {
-						elementId: 'eea-sq-apple-pay'
-					},
-					// Call back functions.
-					callbacks: {
-						// Customize the createPaymentRequest callback function.
-						createPaymentRequest: squareInstance.createWalletPayment.bind(squareInstance),
-						// Enable the buttons if supported.
-						methodsSupported: squareInstance.enableDigitalWallet.bind(squareInstance),
-						// Triggered when: squarePaymentForm completes a card
-						// nonce request through Google Pay or Apple Pay.
-						cardNonceResponseReceived: squareInstance.handleSquareResponse.bind(squareInstance),
-					}
-				});
-				// Build the Digital Wallet form.
-				this.squareDigitalWallet.build((error, result) => {
-					if (error) {
-						this.paymentError(error);
-					}
-				});
+ 				if (eeaSquareParameters.useDigitalWallet === '1') {
+					this.squareDigitalWallet = new SqPaymentForm({
+						applicationId: eeaSquareParameters.appId,
+						locationId: eeaSquareParameters.locationId,
+						inputClass: 'sq-input',
+						autoBuild: false,
+						// Initialize Google Pay button ID.
+						googlePay: {
+							elementId: 'eea-sq-google-pay'
+						},
+						// Initialize Apple Pay placeholder ID.
+						applePay: {
+							elementId: 'eea-sq-apple-pay'
+						},
+						// Call back functions.
+						callbacks: {
+							// Customize the createPaymentRequest callback function.
+							createPaymentRequest: squareInstance.createWalletPayment.bind(squareInstance),
+							// Enable the buttons if supported.
+							methodsSupported: squareInstance.enableDigitalWallet.bind(squareInstance),
+							// Triggered when: squarePaymentForm completes a card
+							// nonce request through Google Pay or Apple Pay.
+							cardNonceResponseReceived: squareInstance.handleSquareResponse.bind(squareInstance),
+						}
+					});
+					// Build the Digital Wallet form.
+					this.squareDigitalWallet.build((error, result) => {
+						if (error) {
+							this.paymentError(error);
+						}
+					});
+				}
 
 				// Set the right amount on the button.
 				$(this.submitButtonId).val(

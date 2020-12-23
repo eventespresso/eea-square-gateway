@@ -48,6 +48,7 @@ jQuery(document).ready(function($) {
 		this.form = {};
 		this.connectBtnId = '#eea_square_connect_btn_' + this.slug;
 		this.disconnectBtnId = '#eea_square_disconnect_btn_' + this.slug;
+		this.connectSectionId = '#eea_square_oauth_section_' + this.slug;
 		this.appIdFieldId = '#' + this.slug + '-app-id';
 		this.accessTokenFieldId = '#' + this.slug + '-access-token';
 		this.locationIdFieldId = '#' + this.slug + '-location-id';
@@ -229,13 +230,13 @@ jQuery(document).ready(function($) {
 			const appIdInput = target.parents('form').find(this.appIdFieldId).closest('tr');
 			const accessTokenInput = target.parents('form').find(this.accessTokenFieldId).closest('tr');
 			const locationIdInput = target.parents('form').find(this.locationIdFieldId).closest('tr');
-			const digitalWalletInput = target.parents('form').find(this.useDwalletId).closest('tr');
+			const authenticationInput = target.parents('form').find(this.connectSectionId).closest('tr');
 			const digitalWalletToggle = target.parents('form').find(this.useDwalletId);
 
 			if (target.val() === 'personal') {
 				appIdInput.css('display', 'table-row');
 				accessTokenInput.css('display', 'table-row');
-				digitalWalletInput.css('display', 'table-row');
+				authenticationInput.css('display', 'none');
 				// Double check the Digital Wallet toggle.
 				if (digitalWalletToggle.val() === '1') {
 					locationIdInput.css('display', 'table-row');
@@ -246,7 +247,7 @@ jQuery(document).ready(function($) {
 				appIdInput.css('display', 'none');
 				accessTokenInput.css('display', 'none');
 				locationIdInput.css('display', 'none');
-				digitalWalletInput.css('display', 'none');
+				authenticationInput.css('display', 'table-row');
 			}
 		};
 
@@ -255,10 +256,11 @@ jQuery(document).ready(function($) {
 		 * @function
 		 */
 		this.toggleDwalletInputs = function(target) {
+			const oauthInput = target.parents('form').find(this.authenticationFieldId);
 			const locationIdInput = target.parents('form').find(this.locationIdFieldId).closest('tr');
 
 			// Hide the Digital Wallet required inputs.
-			if (target.val() === '1') {
+			if (target.val() === '1' && oauthInput.val() === 'personal') {
 				locationIdInput.css('display', 'table-row');
 			} else {
 				locationIdInput.css('display', 'none');
