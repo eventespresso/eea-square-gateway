@@ -215,11 +215,11 @@ jQuery(document).ready(function($) {
 						autoBuild: false,
 						// Initialize Google Pay button ID.
 						googlePay: {
-							elementId: 'eea-sq-google-pay'
+							elementId: 'eea-square-pm-google-pay'
 						},
 						// Initialize Apple Pay placeholder ID.
 						applePay: {
-							elementId: 'eea-sq-apple-pay'
+							elementId: 'eea-square-pm-apple-pay'
 						},
 						// Call back functions.
 						callbacks: {
@@ -260,8 +260,8 @@ jQuery(document).ready(function($) {
 		 * @function enableDigitalWallet
 		 */
 		this.enableDigitalWallet = function(methods, unsupportedReason) {
-			const googlePayBtn = document.getElementById('eea-sq-google-pay');
-			const applePayBtn = document.getElementById('eea-sq-apple-pay');
+			const googlePayBtn = document.getElementById('eea-square-pm-google-pay');
+			const applePayBtn = document.getElementById('eea-square-pm-apple-pay');
 
 			// Only show the button if Google Pay on the Web is enabled.
 			if (methods.googlePay === true) {
