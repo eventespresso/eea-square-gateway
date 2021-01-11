@@ -242,7 +242,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
 
 
     /**
-     *  Check the connection status and update the interface.
+     * Check the connection status and update the interface.
      *
      * @return void
      * @throws InvalidArgumentException
@@ -252,10 +252,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function updateConnectionStatus()
     {
-        $submittedPm = sanitize_key($_POST['submittedPm']);
-        $square = EEM_Payment_Method::instance()->get_one_by_slug($submittedPm);
-        $accessToken = $square->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
-        $usingOauth = $square->get_extra_meta(Domain::META_KEY_USING_OAUTH, true);
+        $square = EED_SquareOnsiteOAuth::getSubmittedPm($_POST);
+        $accessToken = $usingOauth = null;
+        if ($square) {
+            $accessToken = $square->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
+            $usingOauth = $square->get_extra_meta(Domain::META_KEY_USING_OAUTH, true);
+        }
         $connected = true;
         if (empty($accessToken) || ! $usingOauth) {
             $connected = false;
@@ -264,6 +266,27 @@ class EED_SquareOnsiteOAuth extends EED_Module
             'connected' => $connected,
         ]);
         exit();
+    }
+
+
+    /**
+     * Retrieve the payment method from the _POST data.
+     *
+     * @param $postData array
+     * @return EE_Payment_Method|bool
+     */
+    public static function getSubmittedPm($postData)
+    {
+        $submittedPm = sanitize_key($postData['submittedPm']);
+        try {
+            $square = EEM_Payment_Method::instance()->get_one_by_slug($submittedPm);
+            if ($square instanceof EE_Payment_Method) {
+                return $square;
+            }
+        } catch (EE_Error $error) {
+            return false;
+        }
+        return false;
     }
 
 
