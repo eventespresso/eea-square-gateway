@@ -63,4 +63,9 @@ class Domain
      * Name of the Extra Meta that stores the option for enabling the Square Digital Wallet (Google Pay and Apple Pay).
      */
     const META_KEY_USE_DIGITAL_WALLET = 'use_dwallet';
+
+    /*
+     * Name of the Extra Meta that stores the option for the refresh token requests throttle window.
+     */
+    const META_KEY_THROTTLE_TIME = 'throttle_time';
 }

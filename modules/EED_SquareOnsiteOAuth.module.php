@@ -145,7 +145,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             Domain::META_KEY_USING_OAUTH,
             true
         );
-        $squarePm->update_extra_meta('throttle_time', date("Y-m-d H:i:s"));
+        $squarePm->update_extra_meta(Domain::META_KEY_THROTTLE_TIME, date("Y-m-d H:i:s"));
         $squarePm->update_extra_meta(
             Domain::META_KEY_LOCATION_ID,
             sanitize_text_field($_GET[ Domain::META_KEY_LOCATION_ID ])
@@ -309,7 +309,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $squarePm->delete_extra_meta(Domain::META_KEY_LIVE_MODE);
         $squarePm->delete_extra_meta(Domain::META_KEY_LOCATION_ID);
         $squarePm->update_extra_meta(Domain::META_KEY_USING_OAUTH, false);
-        $squarePm->delete_extra_meta('throttle_time');
+        $squarePm->delete_extra_meta(Domain::META_KEY_THROTTLE_TIME);
 
         // Tell Square that the account has been disconnected.
         $postArgs = [
@@ -461,7 +461,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 Domain::META_KEY_USING_OAUTH,
                 true
             );
-            $squarePm->update_extra_meta('throttle_time', date("Y-m-d H:i:s"));
+            $squarePm->update_extra_meta(Domain::META_KEY_THROTTLE_TIME, date("Y-m-d H:i:s"));
         }
     }
 
@@ -478,7 +478,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         if (EED_SquareOnsiteOAuth::isAuthenticated($squarePm)) {
             // Throttle the requests a bit.
             $now = new DateTime('now');
-            $throttleTimeMeta = $squarePm->get_extra_meta('throttle_time', true);
+            $throttleTimeMeta = $squarePm->get_extra_meta(Domain::META_KEY_THROTTLE_TIME, true);
             if ($throttleTimeMeta) {
                 $throttleTime = new DateTime($throttleTimeMeta);
                 $lastChecked = $now->diff($throttleTime)->format('%a');
@@ -487,7 +487,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
                     return false;
                 }
             }
-            $squarePm->update_extra_meta('throttle_time', date("Y-m-d H:i:s"));
+            $squarePm->update_extra_meta(Domain::META_KEY_THROTTLE_TIME, date("Y-m-d H:i:s"));
 
             // Now check the token's validation date.
             $expiresAtString = $squarePm->get_extra_meta(Domain::META_KEY_EXPIRES_AT, true);
