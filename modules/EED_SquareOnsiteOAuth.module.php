@@ -179,6 +179,11 @@ class EED_SquareOnsiteOAuth extends EED_Module
         }
         $squareSlug = sanitize_key($_POST['submittedPm']);
         $square = EEM_Payment_Method::instance()->get_one_by_slug($squareSlug);
+        if (! $square instanceof EE_Payment_Method) {
+            $errMsg = esc_html__('Could not specify the payment method.', 'event_espresso');
+            echo wp_json_encode(['squareError' => $errMsg]);
+            exit();
+        }
         // Just save the debug mode option if it was changed..
         // It simplifies the rest of this process. PM settings might also not be saved after the OAuth process.
         if (array_key_exists('debugMode', $_POST)
@@ -186,11 +191,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
             && $square->debug_mode() !== (int) $_POST['debugMode']
         ) {
             $square->save(['PMD_debug_mode' => $_POST['debugMode']]);
-        }
-        if (! $square instanceof EE_Payment_Method) {
-            $errMsg = esc_html__('Could not specify the payment method.', 'event_espresso');
-            echo wp_json_encode(['squareError' => $errMsg]);
-            exit();
         }
         $nonce = wp_create_nonce('eea_square_grab_access_token');
         // OAuth return handler.
