@@ -378,9 +378,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @throws InvalidDataTypeException
      * @throws EE_Error
      */
-    public static function refreshToken($squarePm)
+    public static function refreshToken(EE_Payment_Method $squarePm)
     {
-        $nonce = wp_create_nonce('eea_square_refresh_access_token');
         if (! $squarePm instanceof EE_Payment_Method) {
             $errMsg = esc_html__('Could not specify the payment method.', 'event_espresso');
             EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, false);
@@ -390,6 +389,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             $errMsg = esc_html__('Could not find the refresh token.', 'event_espresso');
             EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, false);
         }
+        $nonce = wp_create_nonce('eea_square_refresh_access_token');
 
         // Try refreshing the token.
         $postArgs = [
