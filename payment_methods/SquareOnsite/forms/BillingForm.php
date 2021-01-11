@@ -89,7 +89,6 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
             $this->squareOnsitePmt = $paymentMethod;
             $this->transaction = isset($options['transaction']) ? $options['transaction'] : null;
             $this->template_path = $options['template_path'];
-            EE_Registry::instance()->load_helper('Money');
 
             if (isset($options['amount_owing'])) {
                 $this->payAmount = $options['amount_owing'];

@@ -115,7 +115,7 @@ class SettingsForm extends EE_Payment_Method_Form
      * @return void
      * @throws EE_Error|ReflectionException
      */
-    public function addSquareConnectButton($paymentMethod, $pmInstance)
+    public function addSquareConnectButton(EE_PMT_SquareOnsite $paymentMethod, EE_Payment_Method $pmInstance)
     {
         // If there is an established connection we should check the debug mode and the connection.
         $usingSquareOauth = $pmInstance->get_extra_meta(Domain::META_KEY_USING_OAUTH, true, false);

@@ -7,7 +7,7 @@
             'Adjust the settings for the Square payment gateway. More information can be found on %1$ssquareup.com%2$s.',
             'event_espresso'
         ),
-        '<a href="https://developer.squareup.com/">',
+        '<a href="https://developer.squareup.com/" target="_blank">',
         '</a>'
     ); ?>
 </p>
@@ -15,9 +15,13 @@
 <ul>
     <li>
         <strong><?php esc_html_e('Authentication Type', 'event_espresso'); ?></strong><br />
-        <?php esc_html_e(
-            'Whether you would like to use OAuth to authenticate our app to process payments for you, or use our own app credentials described below. Both meet PCI SAQ-A requirements. Both require you to have a Square account',
-            'event_espresso'
+        <?php printf(
+            esc_html__(
+	            'Whether you would like to use OAuth to authenticate our app to process payments for you, or use our own app credentials described below. Both meet %1$sPCI SAQ-A requirements%2$s. Both require you to have a Square account',
+	            'event_espresso'
+            ),
+            '<a href="https://www.pcisecuritystandards.org/pci_security/completing_self_assessment" target="_blank">',
+            '</a>'
         ); ?>
     </li>
     <li>
@@ -27,7 +31,7 @@
                 'The "Application ID" of your Square application. The app can be created on %1$syour apps page%2$s.',
                 'event_espresso'
             ),
-            '<a href="https://developer.squareup.com/apps">',
+            '<a href="https://developer.squareup.com/apps" target="_blank">',
             '</a>'
         ); ?>
     </li>
@@ -49,7 +53,7 @@
                 'The "Location ID" of your Square application. It can be found in the %1$sSeller Dashboard%2$s, Accounts & Settings > Locations in the Business drop-down list in the left pane.',
                 'event_espresso'
             ),
-            '<a href="https://squareup.com/dashboard">',
+            '<a href="https://squareup.com/dashboard" target="_blank">',
             '</a>'
         ); ?>
     </li>
