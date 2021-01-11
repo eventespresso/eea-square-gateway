@@ -168,22 +168,13 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function getConnectionData()
     {
-        if (! isset($_POST['submittedPm'])) {
-            echo wp_json_encode([
-                'squareError' => esc_html__(
-                    'Missing some required parameters: payment method slug.',
-                    'event_espresso'
-                ),
-            ]);
-            exit();
-        }
-        $squareSlug = sanitize_key($_POST['submittedPm']);
-        $square = EEM_Payment_Method::instance()->get_one_by_slug($squareSlug);
+        $square = EED_SquareOnsiteOAuth::getSubmittedPm($_POST);
         if (! $square instanceof EE_Payment_Method) {
             $errMsg = esc_html__('Could not specify the payment method.', 'event_espresso');
             echo wp_json_encode(['squareError' => $errMsg]);
             exit();
         }
+        $squareSlug = sanitize_key($_POST['submittedPm']);
         // Just save the debug mode option if it was changed..
         // It simplifies the rest of this process. PM settings might also not be saved after the OAuth process.
         if (array_key_exists('debugMode', $_POST)
@@ -252,8 +243,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function updateConnectionStatus()
     {
-        $square = EED_SquareOnsiteOAuth::getSubmittedPm($_POST);
         $accessToken = $usingOauth = null;
+        $square = EED_SquareOnsiteOAuth::getSubmittedPm($_POST);
         if ($square) {
             $accessToken = $square->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
             $usingOauth = $square->get_extra_meta(Domain::META_KEY_USING_OAUTH, true);
@@ -277,11 +268,14 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function getSubmittedPm($postData)
     {
-        $submittedPm = sanitize_key($postData['submittedPm']);
         try {
-            $square = EEM_Payment_Method::instance()->get_one_by_slug($submittedPm);
-            if ($square instanceof EE_Payment_Method) {
-                return $square;
+            // Check if all the needed parameters are present.
+            $submittedPm = isset($postData['submittedPm'])
+                ? sanitize_text_field($postData['submittedPm'])
+                : false;
+            $squarePm = EEM_Payment_Method::instance()->get_one_by_slug($submittedPm);
+            if ($squarePm instanceof EE_Payment_Method) {
+                return $squarePm;
             }
         } catch (EE_Error $error) {
             return false;
@@ -301,14 +295,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function disconnectAccount()
     {
-        // Check if all the needed parameters are present.
-        if (! isset($_POST['submittedPm'])) {
-            $errMsg = esc_html__('Missing some required parameters: payment method slug.', 'event_espresso');
-            EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg);
-        }
-        $submittedPm = sanitize_text_field($_POST['submittedPm']);
-        $squarePm = EEM_Payment_Method::instance()->get_one_by_slug($submittedPm);
-        if (! $squarePm instanceof EE_Payment_Method) {
+        $squarePm = EED_SquareOnsiteOAuth::getSubmittedPm($_POST);
+        if (! $squarePm) {
             $errMsg = esc_html__('Could not specify the payment method.', 'event_espresso');
             EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg);
         }
@@ -554,17 +542,19 @@ class EED_SquareOnsiteOAuth extends EED_Module
     /**
      * Log an error, return a json message and exit.
      *
-     * @param EE_Payment_Method $squarePm
+     * @param EE_Payment_Method|boolean $squarePm
      * @param string $errMsg
      * @param bool $doExit Should we echo json and exit
      * @return void
      */
     public static function errorLogAndExit($squarePm, $errMsg = null, $doExit = true)
     {
-        $squarePm->type_obj()->get_gateway()->log(
-            ['Square error' => $errMsg],
-            'Payment_Method'
-        );
+        if ($squarePm instanceof EE_Payment_Method) {
+            $squarePm->type_obj()->get_gateway()->log(
+                ['Square error' => $errMsg],
+                'Payment_Method'
+            );
+        }
         // Do we echo json and exit ?
         if ($doExit) {
             echo wp_json_encode([
