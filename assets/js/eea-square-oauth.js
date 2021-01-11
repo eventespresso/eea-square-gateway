@@ -102,17 +102,17 @@ jQuery(document).ready(function($) {
 		 * @function
 		 */
 		this.connectBtnListeners = function() {
-			const suqarePmInstance = this;
+			const squarePmInstance = this;
 			const sandboxModeSelect = this.form.find('select[name*=square][name*=PMD_debug_mode]');
 
 			// Update connect button text depending on the PM sandbox mode.
 			sandboxModeSelect.each(function() {
-				suqarePmInstance.updateBtnText($(this), false);
+				squarePmInstance.updateBtnText($(this), false);
 			});
 
 			// Listen for the sandbox mode change.
 			sandboxModeSelect.on('change', function() {
-				suqarePmInstance.updateBtnText($(this), true);
+				squarePmInstance.updateBtnText($(this), true);
 			});
 
 			// Connect with Square.
@@ -122,10 +122,10 @@ jQuery(document).ready(function($) {
 				const submittingForm = $(this).parents('form:first')[0];
 				if (buttonContainer && submittingForm) {
 					// Check if window already open.
-					if (suqarePmInstance.oauthWindow &&
-						 ! suqarePmInstance.oauthWindow.closed
+					if (squarePmInstance.oauthWindow &&
+						 ! squarePmInstance.oauthWindow.closed
 					) {
-						suqarePmInstance.oauthWindow.focus();
+						squarePmInstance.oauthWindow.focus();
 						return;
 					}
 					// Need to open the new window now to prevent browser pop-up blocking.
@@ -143,10 +143,10 @@ jQuery(document).ready(function($) {
 						'left=' + (screen.width - wWidth) / 2,
 						'centered=true'
 					];
-					suqarePmInstance.oauthWindow = window.open('', 'SquareConnectPopupWindow', parameters.join());
+					squarePmInstance.oauthWindow = window.open('', 'SquareConnectPopupWindow', parameters.join());
 					setTimeout(
 						function() {
-							$(suqarePmInstance.oauthWindow.document.body).html(
+							$(squarePmInstance.oauthWindow.document.body).html(
 								'<html><head>' +
 								'<title>Square Payments</title>' +
 								'<link rel="stylesheet" type="text/css" href="' +
@@ -159,7 +159,7 @@ jQuery(document).ready(function($) {
 								'<span class="ee-spinner ee-spin">' +
 								'</div></body></html>'
 							);
-							const eeLoader = suqarePmInstance.oauthWindow.document.getElementById(
+							const eeLoader = squarePmInstance.oauthWindow.document.getElementById(
 								this.processingIconName
 							);
 							eeLoader.style.display = 'inline-block';
@@ -168,27 +168,27 @@ jQuery(document).ready(function($) {
 						100
 					);
 					// Check in case the pop-up window was blocked.
-					if (! suqarePmInstance.oauthWindow ||
-						typeof suqarePmInstance.oauthWindow === 'undefined' ||
-						typeof suqarePmInstance.oauthWindow.closed === 'undefined' ||
-						suqarePmInstance.oauthWindow.closed
+					if (! squarePmInstance.oauthWindow ||
+						typeof squarePmInstance.oauthWindow === 'undefined' ||
+						typeof squarePmInstance.oauthWindow.closed === 'undefined' ||
+						squarePmInstance.oauthWindow.closed
 					) {
-						suqarePmInstance.oauthWindow = null;
+						squarePmInstance.oauthWindow = null;
 						alert(squareParams.blockedPopupNotice);
 						console.log(squareParams.blockedPopupNotice);
 						return;
 					}
 
 					// Should we update the connected area text ?
-					suqarePmInstance.updateConnectionInfo(submittingForm);
+					squarePmInstance.updateConnectionInfo(submittingForm);
 
 					// Continue to the OAuth page.
-					suqarePmInstance.submittedPm = buttonContainer.attr('id').replace(
+					squarePmInstance.submittedPm = buttonContainer.attr('id').replace(
 						/eea_square_connect_|eea_square_disconnect_/,
 						''
 					);
-					suqarePmInstance.debugMode = suqarePmInstance.debugModeInput[0].value;
-					suqarePmInstance.oauthSendRequest('squareRequestConnectData');
+					squarePmInstance.debugMode = squarePmInstance.debugModeInput[0].value;
+					squarePmInstance.oauthSendRequest('squareRequestConnectData');
 				} else {
 					console.log(squareParams.unknownContainer);
 				}
@@ -200,12 +200,12 @@ jQuery(document).ready(function($) {
 				const buttonContainer = $(this).closest('tr');
 				const submittingForm = $(this).parents('form:first')[0];
 				if (buttonContainer && submittingForm) {
-					suqarePmInstance.submittedPm = buttonContainer.attr('id').replace(
+					squarePmInstance.submittedPm = buttonContainer.attr('id').replace(
 						/eea_square_connect_|eea_square_disconnect_/,
 						''
 					);
-					suqarePmInstance.debugMode = suqarePmInstance.debugModeInput[0].value;
-					suqarePmInstance.oauthSendRequest('squareRequestDisconnect');
+					squarePmInstance.debugMode = squarePmInstance.debugModeInput[0].value;
+					squarePmInstance.oauthSendRequest('squareRequestDisconnect');
 				} else {
 					console.log(squareParams.unknownContainer);
 				}
@@ -214,11 +214,11 @@ jQuery(document).ready(function($) {
 			this.toggleNonApplicableInputs(this.form.parents('form').find(this.authenticationFieldId));
 			// Change listener for the Authentication type select.
 			$(this.authenticationFieldId).change(function(event) {
-				suqarePmInstance.toggleNonApplicableInputs($(event.target));
+				squarePmInstance.toggleNonApplicableInputs($(event.target));
 			});
 			// Change listener for the Digital Wallet toggle.
 			$(this.useDwalletId).change(function(event) {
-				suqarePmInstance.toggleDwalletInputs($(event.target));
+				squarePmInstance.toggleDwalletInputs($(event.target));
 			});
 		};
 
@@ -227,11 +227,12 @@ jQuery(document).ready(function($) {
 		 * @function
 		 */
 		this.toggleNonApplicableInputs = function(target) {
-			const appIdInput = target.parents('form').find(this.appIdFieldId).closest('tr');
-			const accessTokenInput = target.parents('form').find(this.accessTokenFieldId).closest('tr');
-			const locationIdInput = target.parents('form').find(this.locationIdFieldId).closest('tr');
-			const authenticationInput = target.parents('form').find(this.connectSectionId).closest('tr');
-			const digitalWalletToggle = target.parents('form').find(this.useDwalletId);
+			const targetForm = target.parents('form');
+			const appIdInput = targetForm.find(this.appIdFieldId).closest('tr');
+			const accessTokenInput = targetForm.find(this.accessTokenFieldId).closest('tr');
+			const locationIdInput = targetForm.find(this.locationIdFieldId).closest('tr');
+			const authenticationInput = targetForm.find(this.connectSectionId).closest('tr');
+			const digitalWalletToggle = targetForm.find(this.useDwalletId);
 
 			if (target.val() === 'personal') {
 				appIdInput.css('display', 'table-row');
@@ -256,8 +257,9 @@ jQuery(document).ready(function($) {
 		 * @function
 		 */
 		this.toggleDwalletInputs = function(target) {
-			const oauthInput = target.parents('form').find(this.authenticationFieldId);
-			const locationIdInput = target.parents('form').find(this.locationIdFieldId).closest('tr');
+			const targetForm = target.parents('form');
+			const oauthInput = targetForm.find(this.authenticationFieldId);
+			const locationIdInput = targetForm.find(this.locationIdFieldId).closest('tr');
 
 			// Hide the Digital Wallet required inputs.
 			if (target.val() === '1' && oauthInput.val() === 'personal') {
@@ -348,7 +350,7 @@ jQuery(document).ready(function($) {
 			requestData.action = requestAction;
 			requestData.submittedPm = this.submittedPm;
 			requestData.debugMode = this.debugMode;
-			const suqarePmInstance = this;
+			const squarePmInstance = this;
 			$.ajax({
 				type: 'POST',
 				url: eei18n.ajax_url,
@@ -359,9 +361,9 @@ jQuery(document).ready(function($) {
 					window.do_before_admin_page_ajax();
 				},
 				success: function(response) {
-					suqarePmInstance.oauthRequestSuccess(response, requestAction);
+					squarePmInstance.oauthRequestSuccess(response, requestAction);
 				},
-				error: suqarePmInstance.oauthRequestError,
+				error: squarePmInstance.oauthRequestError,
 			});
 		};
 
@@ -436,10 +438,10 @@ jQuery(document).ready(function($) {
 			) {
 				this.oauthWindow.location = requestUrl;
 				// Update the connection status if window was closed.
-				const suqarePmInstance = this;
+				const squarePmInstance = this;
 				this.oauthWindowTimer = setInterval(
 					function() {
-						suqarePmInstance.checkOauthWindow();
+						squarePmInstance.checkOauthWindow();
 					},
 					500
 				);
