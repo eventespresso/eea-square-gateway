@@ -65,6 +65,13 @@ class OAuthForm extends EE_Form_Section_Proper
      */
     protected $oauthedSandboxText = null;
 
+    /**
+     *  Square OAuth section sandbox mode text.
+     *
+     * @var string
+     */
+    protected $oauthedSandboxSection = null;
+
 
     /**
      * Class constructor.
@@ -119,16 +126,18 @@ class OAuthForm extends EE_Form_Section_Proper
             'eea_square_oauth_section_' . $this->pmSlug,
             'eea-square-oauth-section'
         );
+        $squareData = $this->thePmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
 
         // Is this a test connection ?
-        $livemode = $this->thePmInstance->get_extra_meta(Domain::META_KEY_LIVE_MODE, true);
-        $livemodeText = (! $livemode)
-            ? ' ' . EEH_HTML::strong(
-                $this->oauthedSandboxText,
-                'eea_square_test_connected_txt',
-                'eea-square-test-connected-txt'
-            )
+        $debugModeText = isset($squareData[ Domain::META_KEY_LIVE_MODE ])
+                && ! $squareData[ Domain::META_KEY_LIVE_MODE ]
+            ?  $this->oauthedSandboxText
             : '';
+        $this->oauthedSandboxSection = ' ' . EEH_HTML::strong(
+            $debugModeText,
+            'eea_square_test_connected_txt_' . $this->pmSlug,
+            'eea-square-test-connected-txt'
+        );
 
         // Section to be displayed if not connected.
         $subsections['square_connect_btn'] = new EE_Form_Section_HTML(
@@ -163,10 +172,10 @@ class OAuthForm extends EE_Form_Section_Proper
                     )
                     . EEH_HTML::strong(
                         esc_html__('Connected.', 'event_espresso'),
-                        'eea_square_connected_txt',
+                        'eea_square_connected_txt_' . $this->pmSlug,
                         'eea-square-connected-txt'
                     )
-                    . $livemodeText
+                    . $this->oauthedSandboxSection
                     . EEH_HTML::link(
                         '#',
                         EEH_HTML::span(esc_html__('Disconnect', 'event_espresso')),

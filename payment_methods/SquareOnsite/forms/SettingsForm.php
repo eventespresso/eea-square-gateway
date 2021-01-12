@@ -118,13 +118,15 @@ class SettingsForm extends EE_Payment_Method_Form
     public function addSquareConnectButton(EE_PMT_SquareOnsite $paymentMethod, EE_Payment_Method $pmInstance)
     {
         // If there is an established connection we should check the debug mode and the connection.
-        $usingSquareOauth = $pmInstance->get_extra_meta(Domain::META_KEY_USING_OAUTH, true, false);
-        $connectionLiveMode = $pmInstance->get_extra_meta(Domain::META_KEY_LIVE_MODE, true);
+        $squareData = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         $pmDebugMode = $pmInstance->debug_mode();
         $debugInput = $this->get_input('PMD_debug_mode', false);
         $modeInput = $this->get_input(Domain::META_KEY_AUTH_TYPE, false);
-        if ($usingSquareOauth) {
-            if ($connectionLiveMode && $pmDebugMode) {
+        if (isset($squareData[ Domain::META_KEY_USING_OAUTH ]) && $squareData[ Domain::META_KEY_USING_OAUTH ]) {
+            if (isset($squareData[ Domain::META_KEY_LIVE_MODE ])
+                && $squareData[ Domain::META_KEY_LIVE_MODE ]
+                && $pmDebugMode
+            ) {
                 $this->add_validation_error(
                     sprintf(
                         // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
@@ -139,7 +141,10 @@ class SettingsForm extends EE_Payment_Method_Form
                     ),
                     'ee4_square_live_connection_but_pm_debug_mode'
                 );
-            } elseif (! $connectionLiveMode && ! $pmDebugMode) {
+            } elseif ((! isset($squareData[ Domain::META_KEY_LIVE_MODE ])
+                || ! $squareData[ Domain::META_KEY_LIVE_MODE ])
+                && ! $pmDebugMode
+            ) {
                 $this->add_validation_error(
                     sprintf(
                         // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.

@@ -122,33 +122,23 @@ class EED_SquareOnsiteOAuth extends EED_Module
             sanitize_text_field($_GET[ Domain::META_KEY_ACCESS_TOKEN ])
         );
         $squarePm->update_extra_meta(
-            Domain::META_KEY_REFRESH_TOKEN,
-            sanitize_text_field($_GET[ Domain::META_KEY_REFRESH_TOKEN ])
-        );
-        $squarePm->update_extra_meta(
-            Domain::META_KEY_EXPIRES_AT,
-            sanitize_key($_GET[ Domain::META_KEY_EXPIRES_AT ])
-        );
-        $squarePm->update_extra_meta(
             Domain::META_KEY_APPLICATION_ID,
             sanitize_text_field($_GET[ Domain::META_KEY_APPLICATION_ID ])
         );
         $squarePm->update_extra_meta(
-            Domain::META_KEY_MERCHANT_ID,
-            sanitize_text_field($_GET[ Domain::META_KEY_MERCHANT_ID ])
-        );
-        $squarePm->update_extra_meta(
-            Domain::META_KEY_LIVE_MODE,
-            sanitize_key($_GET[ Domain::META_KEY_LIVE_MODE ])
-        );
-        $squarePm->update_extra_meta(
-            Domain::META_KEY_USING_OAUTH,
-            true
-        );
-        $squarePm->update_extra_meta(Domain::META_KEY_THROTTLE_TIME, date("Y-m-d H:i:s"));
-        $squarePm->update_extra_meta(
             Domain::META_KEY_LOCATION_ID,
             sanitize_text_field($_GET[ Domain::META_KEY_LOCATION_ID ])
+        );
+        $squarePm->update_extra_meta(
+            Domain::META_KEY_SQUARE_DATA,
+            [
+                Domain::META_KEY_REFRESH_TOKEN => sanitize_text_field($_GET[ Domain::META_KEY_REFRESH_TOKEN ]),
+                Domain::META_KEY_EXPIRES_AT    => sanitize_key($_GET[ Domain::META_KEY_EXPIRES_AT ]),
+                Domain::META_KEY_MERCHANT_ID   => sanitize_text_field($_GET[ Domain::META_KEY_MERCHANT_ID ]),
+                Domain::META_KEY_LIVE_MODE     => sanitize_key($_GET[ Domain::META_KEY_LIVE_MODE ]),
+                Domain::META_KEY_USING_OAUTH   => true,
+                Domain::META_KEY_THROTTLE_TIME => date("Y-m-d H:i:s"),
+            ]
         );
 
         // Write JS to pup-up window to close it and refresh the parent.
@@ -243,14 +233,18 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function updateConnectionStatus()
     {
-        $accessToken = $usingOauth = null;
+        $accessToken = null;
+        $squareData = [];
         $square = EED_SquareOnsiteOAuth::getSubmittedPm($_POST);
         if ($square) {
+            $squareData = $square->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
             $accessToken = $square->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
-            $usingOauth = $square->get_extra_meta(Domain::META_KEY_USING_OAUTH, true);
         }
         $connected = true;
-        if (empty($accessToken) || ! $usingOauth) {
+        if (empty($accessToken)
+            || ! isset($squareData[ Domain::META_KEY_USING_OAUTH ])
+            || ! $squareData[ Domain::META_KEY_USING_OAUTH ]
+        ) {
             $connected = false;
         }
         echo wp_json_encode([
@@ -300,8 +294,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
             $errMsg = esc_html__('Could not specify the payment method.', 'event_espresso');
             EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg);
         }
-        $squareMerchantId = $squarePm->get_extra_meta(Domain::META_KEY_MERCHANT_ID, true);
-        if (! $squareMerchantId) {
+        $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
+        if (! isset($squareData[ Domain::META_KEY_MERCHANT_ID ]) || ! $squareData[ Domain::META_KEY_MERCHANT_ID ]) {
             echo wp_json_encode(
                 [
                     'squareError' => esc_html__('Could not specify the connected merchant.', 'event_espresso'),
@@ -309,18 +303,20 @@ class EED_SquareOnsiteOAuth extends EED_Module
             );
             exit();
         }
+        $squareMerchantId = $squareData[ Domain::META_KEY_MERCHANT_ID ];
 
         // We don't need any credentials info anymore, so remove it.
         // This way, even if there is an error communicating with Square,
         // at least we will have forgotten the old connection details so we can use new ones.
         $squarePm->delete_extra_meta(Domain::META_KEY_APPLICATION_ID);
         $squarePm->delete_extra_meta(Domain::META_KEY_ACCESS_TOKEN);
-        $squarePm->delete_extra_meta(Domain::META_KEY_REFRESH_TOKEN);
-        $squarePm->delete_extra_meta(Domain::META_KEY_MERCHANT_ID);
-        $squarePm->delete_extra_meta(Domain::META_KEY_LIVE_MODE);
         $squarePm->delete_extra_meta(Domain::META_KEY_LOCATION_ID);
-        $squarePm->update_extra_meta(Domain::META_KEY_USING_OAUTH, false);
-        $squarePm->delete_extra_meta(Domain::META_KEY_THROTTLE_TIME);
+        $squarePm->update_extra_meta(
+            Domain::META_KEY_SQUARE_DATA,
+            [
+                Domain::META_KEY_USING_OAUTH => false,
+            ]
+        );
 
         // Tell Square that the account has been disconnected.
         $postArgs = [
@@ -377,6 +373,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @throws InvalidInterfaceException
      * @throws InvalidDataTypeException
      * @throws EE_Error
+     * @throws ReflectionException
      */
     public static function refreshToken(EE_Payment_Method $squarePm)
     {
@@ -384,11 +381,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
             $errMsg = esc_html__('Could not specify the payment method.', 'event_espresso');
             EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, false);
         }
-        $squareRefreshToken = $squarePm->get_extra_meta(Domain::META_KEY_REFRESH_TOKEN, true);
-        if (! $squareRefreshToken) {
+        $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
+        if (! isset($squareData[ Domain::META_KEY_REFRESH_TOKEN ]) || ! $squareData[ Domain::META_KEY_REFRESH_TOKEN ]) {
             $errMsg = esc_html__('Could not find the refresh token.', 'event_espresso');
             EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, false);
         }
+        $squareRefreshToken = $squareData[ Domain::META_KEY_REFRESH_TOKEN ];
         $nonce = wp_create_nonce('eea_square_refresh_access_token');
 
         // Try refreshing the token.
@@ -456,23 +454,18 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 Domain::META_KEY_LOCATION_ID,
                 sanitize_text_field($responseBody->application_id)
             );
+
+            // Some PM data is combined to reduce DB calls.
             $squarePm->update_extra_meta(
-                Domain::META_KEY_REFRESH_TOKEN,
-                sanitize_text_field($responseBody->refresh_token)
+                Domain::META_KEY_SQUARE_DATA,
+                [
+                    Domain::META_KEY_REFRESH_TOKEN => sanitize_text_field($responseBody->refresh_token),
+                    Domain::META_KEY_EXPIRES_AT    => sanitize_key($responseBody->expires_at),
+                    Domain::META_KEY_MERCHANT_ID   => sanitize_text_field($responseBody->merchant_id),
+                    Domain::META_KEY_USING_OAUTH   => true,
+                    Domain::META_KEY_THROTTLE_TIME => date("Y-m-d H:i:s"),
+                ]
             );
-            $squarePm->update_extra_meta(
-                Domain::META_KEY_EXPIRES_AT,
-                sanitize_key($responseBody->expires_at)
-            );
-            $squarePm->update_extra_meta(
-                Domain::META_KEY_MERCHANT_ID,
-                sanitize_text_field($responseBody->merchant_id)
-            );
-            $squarePm->update_extra_meta(
-                Domain::META_KEY_USING_OAUTH,
-                true
-            );
-            $squarePm->update_extra_meta(Domain::META_KEY_THROTTLE_TIME, date("Y-m-d H:i:s"));
         }
     }
 
@@ -489,27 +482,29 @@ class EED_SquareOnsiteOAuth extends EED_Module
         if (EED_SquareOnsiteOAuth::isAuthenticated($squarePm)) {
             // Throttle the requests a bit.
             $now = new DateTime('now');
-            $throttleTimeMeta = $squarePm->get_extra_meta(Domain::META_KEY_THROTTLE_TIME, true);
-            if ($throttleTimeMeta) {
-                $throttleTime = new DateTime($throttleTimeMeta);
+            $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
+            if (isset($squareData[ Domain::META_KEY_THROTTLE_TIME ]) && $squareData[ Domain::META_KEY_THROTTLE_TIME ]) {
+                $throttleTime = new DateTime($squareData[ Domain::META_KEY_THROTTLE_TIME ]);
                 $lastChecked = $now->diff($throttleTime)->format('%a');
                 // Throttle, allowing only once per 3 days.
                 if (intval($lastChecked) < 3) {
                     return false;
                 }
             }
-            $squarePm->update_extra_meta(Domain::META_KEY_THROTTLE_TIME, date("Y-m-d H:i:s"));
+            $squareData[ Domain::META_KEY_THROTTLE_TIME ] = date("Y-m-d H:i:s");
+            $squarePm->update_extra_meta(Domain::META_KEY_SQUARE_DATA, $squareData);
 
             // Now check the token's validation date.
-            $expiresAtString = $squarePm->get_extra_meta(Domain::META_KEY_EXPIRES_AT, true);
-            $expiresAt = new DateTime($expiresAtString);
-            $timeLeft = $now->diff($expiresAt);
-            $daysLeft = $timeLeft->format('%a');
+            if (isset($squareData[ Domain::META_KEY_EXPIRES_AT ]) && $squareData[ Domain::META_KEY_EXPIRES_AT ]) {
+                $expiresAt = new DateTime($squareData[ Domain::META_KEY_EXPIRES_AT ]);
+                $timeLeft = $now->diff($expiresAt);
+                $daysLeft = $timeLeft->format('%a');
 
-            // Request a refresh if less than 5 days left.
-            if (intval($daysLeft) <= 5) {
-                EED_SquareOnsiteOAuth::refreshToken($squarePm);
-                return true;
+                // Request a refresh if less than 5 days left.
+                if (intval($daysLeft) <= 5) {
+                    EED_SquareOnsiteOAuth::refreshToken($squarePm);
+                    return true;
+                }
             }
         }
         return false;
@@ -529,9 +524,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
         if (! $squarePm) {
             return false;
         }
-        $usingOauth = $squarePm->get_extra_meta(Domain::META_KEY_USING_OAUTH, true, false);
+        $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         $accessToken = $squarePm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
-        if ($usingOauth && ! empty($accessToken)) {
+        if (isset($squareData[ Domain::META_KEY_USING_OAUTH ])
+            && $squareData[ Domain::META_KEY_USING_OAUTH ]
+            && ! empty($accessToken)
+        ) {
             return true;
         } else {
             return false;

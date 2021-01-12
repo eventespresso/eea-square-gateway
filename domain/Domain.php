@@ -68,4 +68,10 @@ class Domain
      * Name of the Extra Meta that stores the option for the refresh token requests throttle window.
      */
     const META_KEY_THROTTLE_TIME = 'throttle_time';
+
+    /*
+     * Name of the Extra Meta key that stores a few options as one meta (combined).
+     * These are saved under this key: refresh_token, expires_at, merchant_id, using_square_oauth, throttle_time.
+     */
+    const META_KEY_SQUARE_DATA = 'square_data';
 }
