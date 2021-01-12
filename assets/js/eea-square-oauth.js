@@ -56,6 +56,7 @@ jQuery(document).ready(function($) {
 		this.authenticationFieldId = '#' + this.slug + '-authentication';
 		this.connectSection = 'eea-connect-section-' + this.slug;
 		this.disconnectSection = 'eea-disconnect-section-' + this.slug;
+		this.sandboxOauthedTextSection = 'eea_square_test_connected_txt_' + this.slug;
 		this.formId = '#' + squareInstanceVars.formId;
 		this.processingIconName = 'espresso-ajax-loading';
 		this.debugModeInput = {};
@@ -211,10 +212,10 @@ jQuery(document).ready(function($) {
 				}
 			});
 
-			this.toggleNonApplicableInputs(this.form.parents('form').find(this.authenticationFieldId));
+			this.toggleNonApplicableInputs(this.form.parents('form').find(this.authenticationFieldId), false);
 			// Change listener for the Authentication type select.
 			$(this.authenticationFieldId).change(function(event) {
-				squarePmInstance.toggleNonApplicableInputs($(event.target));
+				squarePmInstance.toggleNonApplicableInputs($(event.target), true);
 			});
 			// Change listener for the Digital Wallet toggle.
 			$(this.useDwalletId).change(function(event) {
@@ -226,7 +227,7 @@ jQuery(document).ready(function($) {
 		 * Show/Hide the non OAuth inputs.
 		 * @function
 		 */
-		this.toggleNonApplicableInputs = function(target) {
+		this.toggleNonApplicableInputs = function(target, toggleOauth) {
 			const targetForm = target.parents('form');
 			const appIdInput = targetForm.find(this.appIdFieldId).closest('tr');
 			const accessTokenInput = targetForm.find(this.accessTokenFieldId).closest('tr');
@@ -237,7 +238,9 @@ jQuery(document).ready(function($) {
 			if (target.val() === 'personal') {
 				appIdInput.css('display', 'table-row');
 				accessTokenInput.css('display', 'table-row');
-				authenticationInput.css('display', 'none');
+				if (toggleOauth) {
+					authenticationInput.css('display', 'none');
+				}
 				// Double check the Digital Wallet toggle.
 				if (digitalWalletToggle.val() === '1') {
 					locationIdInput.css('display', 'table-row');
@@ -248,7 +251,9 @@ jQuery(document).ready(function($) {
 				appIdInput.css('display', 'none');
 				accessTokenInput.css('display', 'none');
 				locationIdInput.css('display', 'none');
-				authenticationInput.css('display', 'table-row');
+				if (toggleOauth) {
+					authenticationInput.css('display', 'table-row');
+				}
 			}
 		};
 
@@ -321,7 +326,7 @@ jQuery(document).ready(function($) {
 			if (disconnectSection && this.debugModeInput) {
 				const pmDebugModeValue = this.debugModeInput[0].value;
 				const sandboxConnectedText = $(disconnectSection).find(
-					'strong[class="' + this.connectSection + '"]'
+					'strong[id="' + this.sandboxOauthedTextSection + '"]'
 				)[0];
 				if (sandboxConnectedText &&
 					pmDebugModeValue === '0' &&
@@ -329,7 +334,7 @@ jQuery(document).ready(function($) {
 				) {
 					// Remove the sandbox connection note.
 					$(sandboxConnectedText).html('');
-				} else if ( sandboxConnectedText &&
+				} else if (sandboxConnectedText &&
 					pmDebugModeValue === '1' &&
 					$(sandboxConnectedText).html().length === 0
 				) {
