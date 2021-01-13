@@ -49,28 +49,21 @@ class OAuthForm extends EE_Form_Section_Proper
      *
      * @var string
      */
-    protected $oauthBtnText = null;
+    protected $oauthBtnText = '';
 
     /**
      *  Square OAuth button in sandbox mode text.
      *
      * @var string
      */
-    protected $oauthBtnSandboxText = null;
+    protected $oauthBtnSandboxText = '';
 
     /**
      *  Square OAuth section sandbox mode text.
      *
      * @var string
      */
-    protected $oauthedSandboxText = null;
-
-    /**
-     *  Square OAuth section sandbox mode text.
-     *
-     * @var string
-     */
-    protected $oauthedSandboxSection = null;
+    protected $oauthedSandboxText = '';
 
 
     /**
@@ -133,7 +126,7 @@ class OAuthForm extends EE_Form_Section_Proper
                 && ! $squareData[ Domain::META_KEY_LIVE_MODE ]
             ?  $this->oauthedSandboxText
             : '';
-        $this->oauthedSandboxSection = ' ' . EEH_HTML::strong(
+        $oauthedSandboxSection = ' ' . EEH_HTML::strong(
             $debugModeText,
             'eea_square_test_connected_txt_' . $this->pmSlug,
             'eea-square-test-connected-txt'
@@ -175,7 +168,7 @@ class OAuthForm extends EE_Form_Section_Proper
                         'eea_square_connected_txt_' . $this->pmSlug,
                         'eea-square-connected-txt'
                     )
-                    . $this->oauthedSandboxSection
+                    . $oauthedSandboxSection
                     . EEH_HTML::link(
                         '#',
                         EEH_HTML::span(esc_html__('Disconnect', 'event_espresso')),
