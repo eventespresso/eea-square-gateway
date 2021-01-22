@@ -218,7 +218,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $accountIndicator = defined('EE_SQUARE_PM_ACCOUNT_INDICATOR') ? EE_SQUARE_PM_ACCOUNT_INDICATOR : '';
         $testingPostfix = $paymentMethod->debug_mode() ? '_sandbox' : '';
         $path = 'square' . $accountIndicator . $testingPostfix;
-        return 'http://connect.eventespresso.' . $middlemanTarget . '/' . $path . '/';
+        return 'https://connect.eventespresso.' . $middlemanTarget . '/' . $path . '/';
     }
 
 
