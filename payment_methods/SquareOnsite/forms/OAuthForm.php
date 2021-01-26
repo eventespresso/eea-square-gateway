@@ -105,9 +105,6 @@ class OAuthForm extends EE_Form_Section_Proper
         // Check the token and refresh if needed.
         EED_SquareOnsiteOAuth::checkAndRefreshToken($this->thePmInstance);
 
-        // Now get the OAuth status.
-        $isOauthed = EED_SquareOnsiteOAuth::isAuthenticated($this->thePmInstance) && $this->thePmInstance->debug_mode();
-
         // The contents.
         $subsections = [];
         $fieldHeading = EEH_HTML::th(
@@ -121,10 +118,16 @@ class OAuthForm extends EE_Form_Section_Proper
         );
         $squareData = $this->thePmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
 
+        // Get the authentication type.
+        $authType = $this->thePmInstance->get_extra_meta(Domain::META_KEY_AUTH_TYPE, true);
+
+        // Now get the OAuth status.
+        $isOauthed = EED_SquareOnsiteOAuth::isAuthenticated($this->thePmInstance);
+
         // Is this a test connection ?
         $debugModeText = isset($squareData[ Domain::META_KEY_LIVE_MODE ])
                 && ! $squareData[ Domain::META_KEY_LIVE_MODE ]
-            ?  $this->oauthedSandboxText
+            ? $this->oauthedSandboxText
             : '';
         $oauthedSandboxSection = ' ' . EEH_HTML::strong(
             $debugModeText,
@@ -148,7 +151,7 @@ class OAuthForm extends EE_Form_Section_Proper
                 'eea_square_connect_' . $this->pmSlug,
                 'eea-connect-section-' . $this->pmSlug,
                 // Are we OAuth'ed ?
-                ($isOauthed) ? 'display:none;' : ''
+                ($authType === 'personal' || $isOauthed) ? 'display:none;' : ''
             )
         );
 
@@ -180,7 +183,7 @@ class OAuthForm extends EE_Form_Section_Proper
                 'eea_square_disconnect_' . $this->pmSlug,
                 'eea-disconnect-section-' . $this->pmSlug,
                 // Are we OAuth'ed ?
-                ($isOauthed) ? '' : 'display:none;'
+                ($authType === 'personal' || ! $isOauthed) ? 'display:none;' : ''
             )
         );
 

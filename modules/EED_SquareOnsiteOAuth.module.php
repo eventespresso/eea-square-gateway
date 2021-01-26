@@ -106,6 +106,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             // This is an error. Close the window.
             EED_SquareOnsiteOAuth::closeOauthWindow(esc_html__('Nonce fail!', 'event_espresso'));
         }
+
         // Get pm data.
         $squarePm = EEM_Payment_Method::instance()->get_one_by_slug(sanitize_key($_GET['square_slug']));
         if (! $squarePm instanceof EE_Payment_Method) {
@@ -526,7 +527,9 @@ class EED_SquareOnsiteOAuth extends EED_Module
         }
         $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         $accessToken = $squarePm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
-        if (isset($squareData[ Domain::META_KEY_USING_OAUTH ])
+        $authType = $squarePm->get_extra_meta(Domain::META_KEY_AUTH_TYPE, true);
+        if ($authType === 'oauth'
+            && isset($squareData[ Domain::META_KEY_USING_OAUTH ])
             && $squareData[ Domain::META_KEY_USING_OAUTH ]
             && ! empty($accessToken)
         ) {
