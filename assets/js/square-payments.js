@@ -112,7 +112,7 @@ jQuery(document).ready(function($) {
 			// Billing data.
 			if (typeof this.billingForm !== 'undefined') {
 				this.billFirstName = this.billingForm.find(
-					'input[id*="billing-form-first-namde"]:visible');
+					'input[id*="billing-form-first-name"]:visible');
 				this.billLastName = this.billingForm.find(
 					'input[id*="billing-form-last-name"]:visible');
 				this.billEmail = this.billingForm.find(
