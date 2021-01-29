@@ -384,18 +384,18 @@ jQuery(document).ready(function($) {
 				requestShippingAddress: false,
 				requestBillingInfo: true,
 				shippingContact: {
-					familyName: this.billLastName,
-					givenName: this.billFirstName,
-					email: this.billEmail,
-					country: this.billCountry,
-					region: this.billState,
-					city: this.billCity,
+					familyName: this.billLastName.val(),
+					givenName: this.billFirstName.val(),
+					email: this.billEmail.val(),
+					country: this.billCountry.val(),
+					region: this.billState.val(),
+					city: this.billCity.val(),
 					addressLines: [
-						this.billAddress,
-						this.billAddress2
+						this.billAddress.val(),
+						this.billAddress2.val()
 					],
-					postalCode: this.billZip,
-					phone: this.billPhone
+					postalCode: this.billZip.val(),
+					phone: this.billPhone.val()
 				},
 				currencyCode: eeaSquareParameters.paymentCurrency,
 				countryCode: eeaSquareParameters.orgCountry,
