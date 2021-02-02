@@ -291,6 +291,8 @@ jQuery(document).ready(function($) {
 						+ ' ' + eeaSquareParameters.currencySign
 						+ paymentAmount
 					);
+					// Also update the variable holding the amount.
+					this.payAmount = paymentAmount;
 				}
 			} );
 		};
