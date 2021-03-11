@@ -22,16 +22,12 @@
             <thead>
                 <tr>
                     <td><?php esc_html_e('Card Number', 'event_espresso'); ?></td>
-                    <td><?php esc_html_e('Exp Date (MM/YY)', 'event_espresso'); ?></td>
-                    <td><?php esc_html_e('CVV/CVV2', 'event_espresso'); ?></td>
-                    <td><?php esc_html_e('ZIP Code', 'event_espresso'); ?></td>
+                    <td><?php esc_html_e('Exp, CVV, ZIP', 'event_espresso'); ?></td>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>4111111111111111</td>
-                    <td><?php esc_html_e('Any date greater than today', 'event_espresso'); ?></td>
-                    <td>111</td>
                     <td><?php esc_html_e('Any', 'event_espresso'); ?></td>
                 </tr>
             </tbody>

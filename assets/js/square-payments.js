@@ -289,7 +289,7 @@ jQuery(document).ready(function($) {
 					this.submitPaymentButton.val(
 						eeaSquareParameters.payButtonText
 						+ ' ' + eeaSquareParameters.currencySign
-						+ paymentAmount
+						+ paymentAmount.toFixed(eeaSquareParameters.decimalPlaces)
 					);
 					// Also update the variable holding the amount.
 					this.payAmount = paymentAmount;
