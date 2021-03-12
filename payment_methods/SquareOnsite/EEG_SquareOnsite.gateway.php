@@ -1,13 +1,5 @@
 <?php
 
-use Square\Models\CompletePaymentResponse;
-use Square\Models\Money;
-use Square\Models\CreatePaymentRequest;
-use Square\Models\CreatePaymentResponse;
-use Square\Models\Payment;
-use Square\SquareClient;
-use Square\Exceptions\ApiException;
-use Square\Environment;
 
 /**
  * Class EEG_SquareOnsite
@@ -49,6 +41,12 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      */
     protected $_currencies_supported = EE_Gateway::all_currencies_supported;
 
+    /**
+     * Currencies supported by this gateway.
+     * @var string
+     */
+    protected $apiEndpoint = '';
+
 
     /**
      * Process the payment.
@@ -87,130 +85,118 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
             return $this->setPaymentStatus($payment, $failedStatus, $tokenError, $errorMessage);
         }
 
-        // Live or in debug mode ?
-        $environment = $this->_debug_mode ? Environment::SANDBOX : Environment::PRODUCTION;
+        // Is this a sandbox request.
+        $this->apiEndpoint = $this->_debug_mode
+            ? 'https://connect.squareupsandbox.com/v2/'
+            : 'https://connect.squareup.com/v2/';
 
         // Charge through Square.
-        try {
-            $sqClient = new SquareClient([
-                'accessToken' => $this->_access_token,
-                'environment' => $environment,
-            ]);
+        $postUrlPayments = $this->apiEndpoint . 'payments';
+        // Generate idempotency key if not already set.
+        $transId = $transaction->ID();
+        $theTransId = (! empty($transId)) ? $transId : uniqid();
+        $preNum = substr(number_format(time() * rand(2, 99999), 0, '', ''), 0, 30);
+        $keyPrefix = $this->_debug_mode ? 'TEST-payment' : 'event-payment';
+        $idempotencyKey = $keyPrefix . '-' . $preNum . '-' . $theTransId;
+        $referenceId = $keyPrefix . '-' . $theTransId;
+        // Save the gateway transaction details.
+        $payment->set_extra_accntng('Reference Id: ' . $referenceId . ' Idempotency Key: ' . $idempotencyKey);
 
-            // Generate idempotency key if not already set.
-            $transId = $transaction->ID();
-            $theTransId = (! empty($transId)) ? $transId : uniqid();
-            $preNum = substr(number_format(time() * rand(2, 99999), 0, '', ''), 0, 30);
-            $keyPrefix = $this->_debug_mode ? 'TEST-payment' : 'event-payment';
-            $idempotencyKey = $keyPrefix . '-' . $preNum . '-' . $theTransId;
-            $referenceId = $keyPrefix . '-' . $theTransId;
-            // Save the gateway transaction details.
-            $payment->set_extra_accntng('Reference Id: ' . $referenceId . ' Idempotency Key: ' . $idempotencyKey);
+        // Create an Order for this transaction.
+        $order = $this->createAnOrder($payment, $transaction, $theTransId);
+        if (is_string($order)) {
+            $errorMessage = (string) $order;
+            $orderError = esc_html__('No order created !', 'event_espresso');
+            return $this->setPaymentStatus($payment, $failedStatus, $orderError, $errorMessage);
+        }
 
-            // Payment amount.
-            $sqMoney = $this->amountToMoney($payment->amount(), $payment);
+        // Form an order with all the line items and discounts.
+        $paymentBody = [
+            'source_id'       => $billing_info['eea_square_token'],
+            'order_id'        => $order->id,
+            'idempotency_key' => $idempotencyKey,
+            'amount_money' => [
+                'amount'   => $this->convertToSubunits($payment->amount()),
+                'currency' => $payment->currency_code()
+            ],
+            'location_id'     => $this->_location_id,
+            'reference_id'    => $referenceId,
+            'note'            => $this->_get_gateway_formatter()->formatOrderDescription($payment),
+        ];
 
-            // Create an Order for this transaction.
-            $order = $this->createAnOrder($payment, $transaction, $theTransId);
-            if (is_string($order)) {
-                $errorMessage = (string) $order;
-                $orderError = esc_html__('No order created !', 'event_espresso');
-                return $this->setPaymentStatus($payment, $failedStatus, $orderError, $errorMessage);
-            }
+        // Submit the payment.
+        $apiResponse = $this->sendRequest($paymentBody, $postUrlPayments);
 
-            // Create the payment request object.
-            $body = new CreatePaymentRequest(
-                $billing_info['eea_square_token'],
-                $idempotencyKey,
-                $sqMoney
+        // If it's a string - it's an error. So pass that message further.
+        if (is_string($apiResponse)) {
+            return $this->setPaymentStatus($payment, $failedStatus, '', $apiResponse);
+        }
+        if (! isset($apiResponse->payment)) {
+            $errorMessage = esc_html__(
+                'Unexpected error. No payment parameter found in the Payment create response.',
+                'event_espresso'
             );
-            // Setup some payment parameters.
-            $body->setAutocomplete(false);
-            $body->setOrderId($order->id);
-            $body->setReferenceId($referenceId);
-            $body->setNote($this->_get_gateway_formatter()->formatOrderDescription($payment));
-            $paymentsApi = $sqClient->getPaymentsApi();
+            return $this->setPaymentStatus($payment, $failedStatus, '', $errorMessage);
+        }
 
+        // A default error message just in case.
+        $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');
+        $responsePayment = $apiResponse->payment;
+        // Get the payment object and check the status.
+        if ($responsePayment->status === 'COMPLETED') {
+            $paidAmount = $responsePayment->amount_money->amount;
+            $payment = $this->setPaymentStatus(
+                $payment,
+                $approvedStatus,
+                'Square payment ID: ' . $responsePayment->id . ', status: ' . $responsePayment->status,
+                '',
+                $paidAmount
+            );
+            // Save card details.
+            if (isset($responsePayment->card_details)) {
+                $this->savePaymentDetails($payment, $responsePayment);
+            }
+            // Return as the payment is COMPLETE.
+            return $payment;
+        } elseif ($responsePayment->status === 'APPROVED') {
+            // Huh, this should have auto completed... Ok, try to complete the payment.
             // Submit the payment.
-            $apiResponse = $paymentsApi->createPayment($body);
-            if ($apiResponse->isSuccess()) {
-                // A default error message just in case.
-                $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');
-                $result = $apiResponse->getResult();
-                // Is the result of the expected type ?
-                if (! $result instanceof CreatePaymentResponse) {
-                    $resultType = is_object($result) ? get_class($result) : gettype($result);
-                    $payment = $this->setPaymentStatus(
-                        $payment,
-                        $failedStatus,
-                        '',
-                        'Unsuitable result. Expecting a CreatePaymentResponse. Result of type - ' . $resultType
-                    );
-                    return $payment;
-                }
-                // Get the payment object and check the status.
-                $squarePayment = $result->getPayment();
-                $paymentStatus = $squarePayment->getStatus();
-                if ($paymentStatus === 'COMPLETED') {
-                    $paidAmount = $this->getSquareAmount($squarePayment);
+            $completeResponse = $this->sendRequest(
+                $paymentBody,
+                $postUrlPayments . '/' . $responsePayment->id . '/complete'
+            );
+            if (is_object($completeResponse) && isset($completeResponse->payment)) {
+                $completePayment = $completeResponse->payment;
+                if ($completePayment->status === 'COMPLETED') {
+                    $paidAmount = $completePayment->amount_money->amount;
                     $payment = $this->setPaymentStatus(
                         $payment,
                         $approvedStatus,
-                        'Square payment ID: ' . $squarePayment->getId() . ', status: ' . $squarePayment->getStatus(),
+                        'Square payment ID: ' . $completePayment->id . ', status: ' . $completePayment->status,
                         '',
                         $paidAmount
                     );
                     // Save card details.
-                    $this->savePaymentDetails($payment, $squarePayment);
+                    if (isset($responsePayment->card_details)) {
+                        $this->savePaymentDetails($payment, $completePayment);
+                    }
                     // Return as the payment is COMPLETE.
                     return $payment;
-                } elseif ($paymentStatus === 'APPROVED') {
-                    // Huh, this should have auto completed... Ok, try to complete the payment.
-                    $completeResponse = $paymentsApi->completePayment($squarePayment->getId());
-                    if ($completeResponse->isSuccess()) {
-                        $completePaymentResult = $completeResponse->getResult();
-                        // Make sure the result of the expected type.
-                        if ($completePaymentResult instanceof CompletePaymentResponse) {
-                            $squareCompletePayment = $completePaymentResult->getPayment();
-                            $paidAmount = $this->getSquareAmount($squareCompletePayment);
-                            $payment = $this->setPaymentStatus(
-                                $payment,
-                                $approvedStatus,
-                                'Square payment ID: ' . $squareCompletePayment->getId()
-                                    . ', status: ' . $squareCompletePayment->getStatus(),
-                                '',
-                                $paidAmount
-                            );
-                            // Save card details.
-                            $this->savePaymentDetails($payment, $squareCompletePayment);
-                            // Return as the payment is COMPLETE.
-                            return $payment;
-                        }
-                    } else {
-                        $gotErrors = $completeResponse->getErrors();
-                        $paymentMgs = ! empty($gotErrors)
-                            ? $gotErrors[0]->getDetail()
-                            : 'Unknown error. Please contact admin.';
-                    }
+                } else {
+                    $paymentMgs = esc_html__('Unknown error. Please contact admin.', 'event_espresso');
                 }
-                $payment = $this->setPaymentStatus(
-                    $payment,
-                    $declinedStatus,
-                    'Square payment ID: ' . $squarePayment->getId() . ', status: ' . $squarePayment->getStatus(),
-                    $paymentMgs
-                );
             } else {
-                $errors = $apiResponse->getErrors();
-                $payment = $this->setPaymentStatus($payment, $declinedStatus, $errors, $errors[0]->getDetail());
+                $paymentMgs = esc_html__('Unknown error. Please contact admin.', 'event_espresso');
             }
-        } catch (ApiException $exception) {
-            $payment = $this->setPaymentStatus(
-                $payment,
-                $failedStatus,
-                $exception->getTraceAsString(),
-                $exception->getMessage()
-            );
         }
+
+        // Seems like something went wrong if we got here.
+        $payment = $this->setPaymentStatus(
+            $payment,
+            $declinedStatus,
+            'Square payment ID: ' . $responsePayment->id . ', status: ' . $responsePayment->status,
+            $paymentMgs
+        );
 
         return $payment;
     }
@@ -351,8 +337,10 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
                             'currency' => $currency
                         ],
                         'applied_discounts' => $itemDiscounts,
-                        'applied_taxes'     => $allTaxes
                     ];
+                    if ($eventItem->is_taxable()) {
+                        $orderLineItem['applied_taxes'] = $allTaxes;
+                    }
                     $orderItems[] = $orderLineItem;
                     // Count the total to double check later.
                     $itemizedSum += $eventItem->total();
@@ -380,6 +368,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
             $orderItems[] = $extraOrderLineItem;
         }
 
+        // Build the post URL.
+        $postUrl = $this->apiEndpoint . 'orders';
         // Form an order with all the line items and discounts.
         $orderBody = [
             'idempotency_key' => $idempotencyKey,
@@ -399,7 +389,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         }
 
         // First calculate the order to see if the prices match.
-        $calculateResponse = $this->sendRequest($orderBody, true);
+        $calculateResponse = $this->sendRequest($orderBody, $postUrl . '/calculate');
         if (! is_string($calculateResponse) && isset($calculateResponse->order)) {
             $calculateOrder = $calculateResponse->order;
             // If order total and event total don't match try adjusting the total money mount.
@@ -439,7 +429,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         }
 
         // Create Order request.
-        $createOrderResponse = $this->sendRequest($orderBody);
+        $createOrderResponse = $this->sendRequest($orderBody, $postUrl);
 
         // If it's a string - it's an error. So pass that message further.
         if (is_string($createOrderResponse)) {
@@ -457,10 +447,10 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      * Do an API request.
      *
      * @param array $bodyParameters
-     * @param bool $calculate
+     * @param string $postUrl
      * @return Object|string
      */
-    public function sendRequest(array $bodyParameters, $calculate = false)
+    public function sendRequest(array $bodyParameters, $postUrl)
     {
         $postParameters = [
             'method'      => 'POST',
@@ -473,16 +463,6 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
             ],
             'body'        => json_encode($bodyParameters)
         ];
-
-        // Is this a sandbox request.
-        $postUrl = $this->_debug_mode
-            ? 'https://connect.squareupsandbox.com/v2/orders'
-            : 'https://connect.squareup.com/v2/orders';
-        // Is this a calculate request ?
-        if ($calculate) {
-            $postUrl .= '/calculate';
-        }
-
         // Sent the request.
         $requestResult = wp_remote_post($postUrl, $postParameters);
         // Any errors ?
@@ -513,23 +493,6 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
 
         // Ok, the response seems to be just right. Return the data.
         return $apiResponse;
-    }
-
-
-    /**
-     * Convert the string payment amount to Square Money object.
-     *
-     * @param float      $itemPrice
-     * @param EEI_Payment $payment
-     * @return Money
-     */
-    public function amountToMoney($itemPrice, EEI_Payment $payment)
-    {
-        $money = new Money();
-        $payAmount = $this->convertToSubunits($itemPrice);
-        $money->setAmount($payAmount);
-        $money->setCurrency($payment->currency_code());
-        return $money;
     }
 
 
@@ -589,39 +552,24 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
 
 
     /**
-     * Gets the paid amount from a Square payment.
-     *
-     * @param Payment $payment
-     * @return boolean|int
-     */
-    public function getSquareAmount(Payment $payment)
-    {
-        // Try getting the paid amount.
-        $paidMoney = $payment->getAmountMoney();
-        return $paidMoney instanceof Money ? $paidMoney->getAmount() : false;
-    }
-
-
-    /**
      * Gets and saves some basic payment details.
      *
      * @param EEI_Payment $eePayment
-     * @param Payment $squarePayment
+     * @param stdClass $squarePayment
      * @return void
      */
-    public function savePaymentDetails(EEI_Payment $eePayment, Payment $squarePayment)
+    public function savePaymentDetails(EEI_Payment $eePayment, stdClass $squarePayment)
     {
         // Save payment ID.
-        $eePayment->set_txn_id_chq_nmbr($squarePayment->getId());
+        $eePayment->set_txn_id_chq_nmbr($squarePayment->id);
         // Save card details.
-        $cardDetails = $squarePayment->getCardDetails();
-        $cardUsed = $cardDetails->getCard();
+        $cardUsed = $squarePayment->card_details->card;
         $eePayment->set_details([
-            'card_brand' => $cardUsed->getCardBrand(),
-            'last_4' => $cardUsed->getLast4(),
-            'exp_month' => $cardUsed->getExpMonth(),
-            'exp_year' => $cardUsed->getExpYear(),
-            'cardholder_name' => $cardUsed->getCardholderName(),
+            'card_brand' => $cardUsed->card_brand,
+            'last_4' => $cardUsed->last_4,
+            'exp_month' => $cardUsed->exp_month,
+            'exp_year' => $cardUsed->exp_year,
+            'card_type' => $cardUsed->card_type,
         ]);
     }
 }
