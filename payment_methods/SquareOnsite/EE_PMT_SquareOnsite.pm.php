@@ -41,8 +41,6 @@ class EE_PMT_SquareOnsite extends EE_PMT_Base
         $this->_cache_billing_form = true;
         $this->_requires_https = true;
 
-        // Load Square SDK.
-        require_once(EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'vendor/autoload.php');
         // Load gateway.
         require_once(
             EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS . 'SquareOnsite'
