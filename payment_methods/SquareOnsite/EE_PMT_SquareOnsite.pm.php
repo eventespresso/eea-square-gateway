@@ -4,9 +4,7 @@ if (! defined('EVENT_ESPRESSO_VERSION')) {
     exit('No direct script access allowed');
 }
 
-use EventEspresso\Square\domain\Domain;
 use EventEspresso\Square\payment_methods\SquareOnsite\forms\BillingForm;
-use EventEspresso\Square\payment_methods\SquareOnsite\forms\OAuthForm;
 use EventEspresso\Square\payment_methods\SquareOnsite\forms\SettingsForm;
 
 /**

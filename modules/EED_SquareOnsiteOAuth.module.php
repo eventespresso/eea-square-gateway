@@ -192,7 +192,9 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $request_url = add_query_arg(
             [
                 'return_url' => rawurlencode($redirectUri),
-                'scope'      => urlencode('PAYMENTS_WRITE PAYMENTS_READ'),
+                'scope'      => urlencode(
+                    'PAYMENTS_WRITE PAYMENTS_READ ORDERS_WRITE ORDERS_READ ITEMS_WRITE ITEMS_READ'
+                ),
                 'modal'      => true
             ],
             EED_SquareOnsiteOAuth::getMiddlemanBaseUrl($square) . 'forward'
