@@ -536,9 +536,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
             && ! empty($accessToken)
         ) {
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
 

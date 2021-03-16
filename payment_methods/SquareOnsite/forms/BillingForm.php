@@ -92,7 +92,7 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
 
             if (isset($options['amount_owing'])) {
                 $this->payAmount = $options['amount_owing'];
-            } elseif ($this->transaction instanceof EEI_Payment) {
+            } elseif ($this->transaction instanceof EE_Transaction) {
                 // If this is a partial payment.
                 $total = EEH_Money::convert_to_float_from_localized_money($this->transaction->total());
                 $paid = EEH_Money::convert_to_float_from_localized_money($this->transaction->paid());
