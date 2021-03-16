@@ -31,6 +31,7 @@ jQuery(document).ready(function($) {
 	 *	errorResponse: string,
 	 *	oauthRequestErrorText: string,
 	 *	unknownContainer: string,
+	 *	pmNiceName: string,
 	 *	espressoDefaultStyles: string,
 	 *	wpStylesheet: string,
 	 *	connectBtnText: string,
@@ -117,7 +118,7 @@ jQuery(document).ready(function($) {
 			});
 
 			// Connect with Square.
-			$(this.connectBtnId).on('click', function(event) {
+			this.connectBtn.on('click', function(event) {
 				event.preventDefault();
 				const buttonContainer = $(this).closest('tr');
 				const submittingForm = $(this).parents('form:first')[0];
@@ -149,19 +150,19 @@ jQuery(document).ready(function($) {
 						function() {
 							$(squarePmInstance.oauthWindow.document.body).html(
 								'<html><head>' +
-								'<title>Square Payments</title>' +
+								'<title>' + squareParams.pmNiceName + '</title>' +
 								'<link rel="stylesheet" type="text/css" href="' +
 									squareParams.espressoDefaultStyles + '">' +
 								'<link rel="stylesheet" type="text/css" href="' +
 									squareParams.wpStylesheet +
 								'">' +
 								'</head><body>' +
-								'<div id="' + this.processingIconName + '" class="ajax-loading-grey">' +
+								'<div id="' + squarePmInstance.processingIconName + '" class="ajax-loading-grey">' +
 								'<span class="ee-spinner ee-spin">' +
 								'</div></body></html>'
 							);
 							const eeLoader = squarePmInstance.oauthWindow.document.getElementById(
-								this.processingIconName
+								squarePmInstance.processingIconName
 							);
 							eeLoader.style.display = 'inline-block';
 							eeLoader.style.top = '40%';
@@ -176,7 +177,7 @@ jQuery(document).ready(function($) {
 					) {
 						squarePmInstance.oauthWindow = null;
 						alert(squareParams.blockedPopupNotice);
-						console.log(squareParams.blockedPopupNotice);
+						console.error(squareParams.blockedPopupNotice);
 						return;
 					}
 
@@ -191,7 +192,7 @@ jQuery(document).ready(function($) {
 					squarePmInstance.debugMode = squarePmInstance.debugModeInput[0].value;
 					squarePmInstance.oauthSendRequest('squareRequestConnectData');
 				} else {
-					console.log(squareParams.unknownContainer);
+					console.error(squareParams.unknownContainer);
 				}
 			});
 
@@ -208,7 +209,7 @@ jQuery(document).ready(function($) {
 					squarePmInstance.debugMode = squarePmInstance.debugModeInput[0].value;
 					squarePmInstance.oauthSendRequest('squareRequestDisconnect');
 				} else {
-					console.log(squareParams.unknownContainer);
+					console.error(squareParams.unknownContainer);
 				}
 			});
 
@@ -351,10 +352,11 @@ jQuery(document).ready(function($) {
 		 * @function
 		 */
 		this.oauthSendRequest = function(requestAction) {
-			const requestData = {};
-			requestData.action = requestAction;
-			requestData.submittedPm = this.submittedPm;
-			requestData.debugMode = this.debugMode;
+			const requestData = {
+				action: requestAction,
+				submittedPm: this.submittedPm,
+				debugMode: this.debugMode
+			};
 			const squarePmInstance = this;
 			$.ajax({
 				type: 'POST',
@@ -390,7 +392,7 @@ jQuery(document).ready(function($) {
 				if (response.squareError) {
 					squareError = response.squareError;
 				}
-				console.log(squareError);
+				console.error(squareError);
 
 				// Display the error in the pop-up.
 				if (this.oauthWindow) {
@@ -430,7 +432,7 @@ jQuery(document).ready(function($) {
 				this.oauthWindow = null;
 			}
 			$('#' + this.processingIconName).fadeOut('fast');
-			console.log(squareError);
+			console.error(squareError);
 		};
 
 		/**
@@ -472,11 +474,12 @@ jQuery(document).ready(function($) {
 		 * @function
 		 */
 		this.updateConnectionStatus = function() {
-			const requestData = {};
+			const requestData = {
+				action:      'squareUpdateConnectionStatus',
+				submittedPm: this.submittedPm,
+				debugMode:   this.debugMode
+			};
 			const squareInstance = this;
-			requestData.action = 'squareUpdateConnectionStatus';
-			requestData.submittedPm = this.submittedPm;
-			requestData.debugMode = this.debugMode;
 			$.ajax({
 				type: 'POST',
 				url: eei18n.ajax_url,
