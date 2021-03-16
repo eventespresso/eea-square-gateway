@@ -266,6 +266,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         if ($taxLineItems) {
             foreach ($taxLineItems as $taxItem) {
                 if ($taxItem instanceof EE_Line_Item) {
+                    // If Taxes are counted before the discounts or this is a Partial payment
+                    // - list the Taxes as simple Line Items so that Square doesn't count them by their own.
                     if ($promoAffectsTax && ! $partialPayment) {
                         $limeItemTaxPercent = (string) $taxItem->percent();
                         $lineItemTaxUid = 'tax-' . $taxItem->ID() . '-' . $limeItemTaxPercent;
