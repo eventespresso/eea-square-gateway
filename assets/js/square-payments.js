@@ -317,18 +317,19 @@ jQuery(document).ready(function($) {
 		 * Get the transaction data.
 		 */
 		this.getTransactionData = function() {
-			var reqData = {};
+			var reqData = {
+				step: 'payment_options',
+				action: 'get_transaction_details_for_gateways',
+				selected_method_of_payment: eeaSquareParameters.paymentMethodSlug,
+				generate_reg_form: false,
+				process_form_submission: false,
+				noheader: true,
+				ee_front_ajax: true,
+				EESID: eei18n.EESID,
+				revisit: eei18n.revisit,
+				e_reg_url_link: eei18n.e_reg_url_link
+			};
 			const squareInstance = this;
-			reqData.step = 'payment_options';
-			reqData.action = 'get_transaction_details_for_gateways';
-			reqData.selected_method_of_payment = eeaSquareParameters.paymentMethodSlug;
-			reqData.generate_reg_form = false;
-			reqData.process_form_submission = false;
-			reqData.noheader = true;
-			reqData.ee_front_ajax = true;
-			reqData.EESID = eei18n.EESID;
-			reqData.revisit = eei18n.revisit;
-			reqData.e_reg_url_link = eei18n.e_reg_url_link;
 
 			$.ajax({
 				type: "POST",
