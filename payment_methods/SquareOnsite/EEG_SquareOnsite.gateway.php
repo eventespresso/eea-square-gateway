@@ -62,28 +62,11 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         $approvedStatus = $this->_pay_model->approved_status();
 
         // Check the payment.
-        if (! $payment instanceof EEI_Payment) {
-            $errorMessage = esc_html__('Error. No associated payment was found.', 'event_espresso');
-            return $this->setPaymentStatus($payment, $failedStatus, $errorMessage, $errorMessage);
+        $isValidPayment = $this->isPaymentValid($payment, $billing_info);
+        if ($isValidPayment->details() === 'error' && $isValidPayment->status() === $failedStatus) {
+            return $isValidPayment;
         }
-        // Check the transaction.
         $transaction = $payment->transaction();
-        if (! $transaction instanceof EE_Transaction) {
-            $errorMessage = esc_html__(
-                'Could not process this payment because it has no associated transaction.',
-                'event_espresso'
-            );
-            return $this->setPaymentStatus($payment, $failedStatus, $errorMessage, $errorMessage);
-        }
-        // Check for the payment nonce.
-        if (empty($billing_info['eea_square_token'])) {
-            $errorMessage = esc_html__(
-                'No or incorrect card nonce provided. Card nonce is required to process the transaction.',
-                'event_espresso'
-            );
-            $tokenError = esc_html__('No or incorrect Card Nonce provided !', 'event_espresso');
-            return $this->setPaymentStatus($payment, $failedStatus, $tokenError, $errorMessage);
-        }
 
         // Is this a sandbox request.
         $this->apiEndpoint = $this->_debug_mode
@@ -519,6 +502,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         }
         $this->log([$defaultLogText => $responseData], $payment);
         $payment->set_status($status);
+        $payment->set_details('error');
         $payment->set_gateway_response($paymentMsg);
         if ($paidAmount) {
             $payment->set_amount($this->convertToFloat($paidAmount));
@@ -573,5 +557,44 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
             'exp_year' => $cardUsed->exp_year,
             'card_type' => $cardUsed->card_type,
         ]);
+    }
+
+
+    /**
+     * Validates the payment.
+     *
+     * @param mixed $payment
+     * @param array $billingInfo
+     * @return EEI_Payment
+     * @throws EE_Error
+     */
+    public function isPaymentValid($payment, $billingInfo)
+    {
+        $failedStatus = $this->_pay_model->failed_status();
+        if (! $payment instanceof EEI_Payment) {
+            $payment = EE_Payment::new_instance();
+            $errorMessage = esc_html__('Error. No associated payment was found.', 'event_espresso');
+            return $this->setPaymentStatus($payment, $failedStatus, $errorMessage, $errorMessage);
+        }
+        // Check the transaction.
+        $transaction = $payment->transaction();
+        if (! $transaction instanceof EE_Transaction) {
+            $errorMessage = esc_html__(
+                'Could not process this payment because it has no associated transaction.',
+                'event_espresso'
+            );
+            return $this->setPaymentStatus($payment, $failedStatus, $errorMessage, $errorMessage);
+        }
+        // Check for the payment nonce.
+        if (empty($billingInfo['eea_square_token'])) {
+            $errorMessage = esc_html__(
+                'No or incorrect card nonce provided. Card nonce is required to process the transaction.',
+                'event_espresso'
+            );
+            $tokenError = esc_html__('No or incorrect Card Nonce provided !', 'event_espresso');
+            return $this->setPaymentStatus($payment, $failedStatus, $tokenError, $errorMessage);
+        }
+        // All looks good.
+        return $payment;
     }
 }
