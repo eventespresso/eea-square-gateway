@@ -117,6 +117,69 @@ class SettingsForm extends EE_Payment_Method_Form
      */
     public function addSquareConnectButton(EE_PMT_SquareOnsite $paymentMethod, EE_Payment_Method $pmInstance)
     {
+        // Validate connection first.
+        $this->validateConnection($pmInstance);
+
+        // Add the connect button before the app id field.
+        $oauthTemplate = new OAuthForm($paymentMethod, $pmInstance);
+        $this->add_subsections(
+            [
+                'square_oauth' => new EE_Form_Section_HTML($oauthTemplate->get_html_and_js()),
+            ],
+            Domain::META_KEY_APPLICATION_ID
+        );
+    }
+
+
+    /**
+     * Override the default method to do some form validation filtering.
+     *
+     * @param array $requestData
+     * @throws EE_Error
+     */
+    public function _normalize($requestData)
+    {
+        parent::_normalize($requestData);
+        // Filter out the authentication fields.
+        $this->filterAuthFields();
+    }
+
+
+    /**
+     * Possibly exclude the default authentication fields.
+     *
+     * @return void
+     * @throws EE_Error
+     */
+    public function filterAuthFields()
+    {
+        $appId = $this->get_input(Domain::META_KEY_APPLICATION_ID);
+        $accessToken = $this->get_input(Domain::META_KEY_ACCESS_TOKEN);
+        $locationId = $this->get_input(Domain::META_KEY_LOCATION_ID);
+        $useDwallet = $this->get_input_value(Domain::META_KEY_USE_DIGITAL_WALLET);
+        $authType = $this->get_input_value(Domain::META_KEY_AUTH_TYPE);
+        // If 'OAuth' option is selected, discard the app ID and access token fields in case they are empty.
+        if ($authType === 'oauth') {
+            $appId->disable();
+            $accessToken->disable();
+            $locationId->disable();
+        }
+        // Location ID is only required for the Digital Wallet.
+        if (! $useDwallet) {
+            $locationId->disable();
+        }
+    }
+
+
+    /**
+     * Possibly exclude the default authentication fields.
+     *
+     * @param EE_Payment_Method $pmInstance
+     * @return void
+     * @throws EE_Error|ReflectionException
+     */
+    public function validateConnection(EE_Payment_Method $pmInstance)
+    {
         // If there is an established connection we should check the debug mode and the connection.
         $squareData = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         $pmDebugMode = $pmInstance->debug_mode();
@@ -178,54 +241,5 @@ class SettingsForm extends EE_Payment_Method_Form
                 'event_espresso'
             )
         );
-
-        // Add the connect button before the app id field.
-        $oauthTemplate = new OAuthForm($paymentMethod, $pmInstance);
-        $this->add_subsections(
-            [
-                'square_oauth' => new EE_Form_Section_HTML($oauthTemplate->get_html_and_js()),
-            ],
-            Domain::META_KEY_APPLICATION_ID
-        );
-    }
-
-
-    /**
-     * Override the default method to do some form validation filtering.
-     *
-     * @param array $requestData
-     * @throws EE_Error
-     */
-    public function _normalize($requestData)
-    {
-        parent::_normalize($requestData);
-        // Filter out the authentication fields.
-        $this->filterAuthFields();
-    }
-
-
-    /**
-     * Possibly exclude the default authentication fields.
-     *
-     * @return void
-     * @throws EE_Error
-     */
-    public function filterAuthFields()
-    {
-        $appId = $this->get_input(Domain::META_KEY_APPLICATION_ID);
-        $accessToken = $this->get_input(Domain::META_KEY_ACCESS_TOKEN);
-        $locationId = $this->get_input(Domain::META_KEY_LOCATION_ID);
-        $useDwallet = $this->get_input_value(Domain::META_KEY_USE_DIGITAL_WALLET);
-        $authType = $this->get_input_value(Domain::META_KEY_AUTH_TYPE);
-        // If 'OAuth' option is selected, discard the app ID and access token fields in case they are empty.
-        if ($authType === 'oauth') {
-            $appId->disable();
-            $accessToken->disable();
-            $locationId->disable();
-        }
-        // Location ID is only required for the Digital Wallet.
-        if (! $useDwallet) {
-            $locationId->disable();
-        }
     }
 }
