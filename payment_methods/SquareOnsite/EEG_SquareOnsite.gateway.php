@@ -57,25 +57,14 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         $failedStatus = $this->_pay_model->failed_status();
         $approvedStatus = $this->_pay_model->approved_status();
         $declinedStatus = $this->_pay_model->declined_status();
+        // A default error message just in case.
+        $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');
 
         // Check the payment.
         $isValidPayment = $this->isPaymentValid($payment, $billing_info);
         if ($isValidPayment->details() === 'error' && $isValidPayment->status() === $failedStatus) {
             return $isValidPayment;
         }
-        $transaction = $payment->transaction();
-        // A default error message just in case.
-        $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');
-
-        // Generate idempotency key if not already set.
-        $transId = $transaction->ID();
-        $theTransId = (! empty($transId)) ? $transId : uniqid();
-        $preNum = substr(number_format(time() * rand(2, 99999), 0, '', ''), 0, 30);
-        $keyPrefix = $this->_debug_mode ? 'TEST-payment' : 'event-payment';
-        $idempotencyKey = $keyPrefix . '-' . $preNum . '-' . $theTransId;
-        $referenceId = $keyPrefix . '-' . $theTransId;
-        // Save the gateway transaction details.
-        $payment->set_extra_accntng('Reference Id: ' . $referenceId . ' Idempotency Key: ' . $idempotencyKey);
 
         // Create an Order for this transaction.
         $order = $this->createAnOrder($payment);
@@ -181,6 +170,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
             if (isset($responsePayment->card_details)) {
                 $this->savePaymentDetails($payment, $responsePayment);
             }
+            // Save the gateway transaction details.
+            $payment->set_extra_accntng('Square Payment ID: ' . $responsePayment->id);
             // Return as the payment is COMPLETE.
             return $payment;
         } elseif ($responsePayment->status === 'APPROVED') {
@@ -202,6 +193,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
                     if (isset($responsePayment->card_details)) {
                         $this->savePaymentDetails($payment, $completePayment);
                     }
+                    // Save the gateway transaction details.
+                    $payment->set_extra_accntng('Square Payment ID: ' . $responsePayment->id);
                     // Return as the payment is COMPLETE.
                     return $payment;
                 } else {
