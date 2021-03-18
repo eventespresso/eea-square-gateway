@@ -192,6 +192,22 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
             EEA_SQUARE_GATEWAY_VERSION
         );
 
+        // Localize the script with our transaction data.
+        $squareParameters = $this->localizeParameters();
+        wp_localize_script('eea_square_pm_js', 'eeaSquareParameters', $squareParameters);
+        parent::enqueue_js();
+    }
+
+
+    /**
+     * Form and return Square parameters for script localization.
+     *
+     * @return array
+     * @throws EE_Error
+     * @throws ReflectionException
+     */
+    public function localizeParameters()
+    {
         // Convert money for a display format.
         $decimalPlaces = EE_PMT_SquareOnsite::getDecimalPlaces();
         $orgCountry = isset(EE_Registry::instance()->CFG->organization)
@@ -237,9 +253,6 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
                 // @codingStandardsIgnoreEnd
             ),
         ];
-
-        // Localize the script with our transaction data.
-        wp_localize_script('eea_square_pm_js', 'eeaSquareParameters', $squareParameters);
-        parent::enqueue_js();
+        return $squareParameters;
     }
 }
