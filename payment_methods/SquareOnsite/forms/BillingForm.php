@@ -15,7 +15,6 @@ use EE_Template_Layout;
 use EE_Transaction;
 use EED_SquareOnsiteOAuth;
 use EEH_Money;
-use EEI_Payment;
 use EventEspresso\core\exceptions\InvalidDataTypeException;
 use EventEspresso\core\exceptions\InvalidInterfaceException;
 use EventEspresso\Square\domain\Domain;
