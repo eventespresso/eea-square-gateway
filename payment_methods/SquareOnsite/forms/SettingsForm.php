@@ -36,40 +36,6 @@ class SettingsForm extends EE_Payment_Method_Form
         // Fields for basic authentication settings.
         $pmFormParams = [
             'extra_meta_inputs' => [
-                Domain::META_KEY_AUTH_TYPE => new EE_Select_Input(
-                    [
-                        'oauth'    => esc_html__('OAuth (recommended)', 'event_espresso'),
-                        'personal' => esc_html__('Using personal credentials', 'event_espresso')
-                    ],
-                    [
-                        'html_label_text' => esc_html__('Authentication Type', 'event_espresso'),
-                        'required'        => true,
-                        'default'         => 'oauth',
-                        'html_help_text'  => esc_html__(
-                            'Using OAuth with Square is recommended. It\'s an easier way to authenticate with our app.',
-                            'event_espresso'
-                        ),
-                        'html_id'         => $pmInstance->slug() . '-authentication'
-                    ]
-                ),
-                Domain::META_KEY_APPLICATION_ID => new EE_Text_Input([
-                    'html_label_text' => sprintf(
-                        // translators: %1$s: Help tab link as icon.
-                        esc_html__('Application ID %1$s', 'event_espresso'),
-                        $paymentMethod->get_help_tab_link()
-                    ),
-                    'html_id'         => $pmInstance->slug() . '-app-id',
-                    'required'        => true,
-                ]),
-                Domain::META_KEY_ACCESS_TOKEN => new EE_Password_Input([
-                    'html_label_text' => sprintf(
-                        // translators: %1$s: Help tab link as icon.
-                        esc_html__('Access Token %1$s', 'event_espresso'),
-                        $paymentMethod->get_help_tab_link()
-                    ),
-                    'html_id'         => $pmInstance->slug() . '-access-token',
-                    'required'        => true,
-                ]),
                 Domain::META_KEY_USE_DIGITAL_WALLET => new EE_Yes_No_Input(
                     [
                         'html_label_text' => sprintf(
@@ -88,15 +54,6 @@ class SettingsForm extends EE_Payment_Method_Form
                         'required'        => true,
                     ]
                 ),
-                Domain::META_KEY_LOCATION_ID => new EE_Text_Input([
-                    'html_label_text' => sprintf(
-                        // translators: %1$s: Help tab link as icon.
-                        esc_html__('Location ID %1$s', 'event_espresso'),
-                        $paymentMethod->get_help_tab_link()
-                    ),
-                    'html_id'         => $pmInstance->slug() . '-location-id',
-                    'required'        => true,
-                ]),
             ]
         ];
         // Build the PM form.
@@ -126,48 +83,8 @@ class SettingsForm extends EE_Payment_Method_Form
             [
                 'square_oauth' => new EE_Form_Section_HTML($oauthTemplate->get_html_and_js()),
             ],
-            Domain::META_KEY_APPLICATION_ID
+            Domain::META_KEY_USE_DIGITAL_WALLET
         );
-    }
-
-
-    /**
-     * Override the default method to do some form validation filtering.
-     *
-     * @param array $requestData
-     * @throws EE_Error
-     */
-    public function _normalize($requestData)
-    {
-        parent::_normalize($requestData);
-        // Filter out the authentication fields.
-        $this->filterAuthFields();
-    }
-
-
-    /**
-     * Possibly exclude the default authentication fields.
-     *
-     * @return void
-     * @throws EE_Error
-     */
-    public function filterAuthFields()
-    {
-        $appId = $this->get_input(Domain::META_KEY_APPLICATION_ID);
-        $accessToken = $this->get_input(Domain::META_KEY_ACCESS_TOKEN);
-        $locationId = $this->get_input(Domain::META_KEY_LOCATION_ID);
-        $useDwallet = $this->get_input_value(Domain::META_KEY_USE_DIGITAL_WALLET);
-        $authType = $this->get_input_value(Domain::META_KEY_AUTH_TYPE);
-        // If 'OAuth' option is selected, discard the app ID and access token fields in case they are empty.
-        if ($authType === 'oauth') {
-            $appId->disable();
-            $accessToken->disable();
-            $locationId->disable();
-        }
-        // Location ID is only required for the Digital Wallet.
-        if (! $useDwallet) {
-            $locationId->disable();
-        }
     }
 
 
@@ -184,9 +101,9 @@ class SettingsForm extends EE_Payment_Method_Form
         $squareData = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         $pmDebugMode = $pmInstance->debug_mode();
         $debugInput = $this->get_input('PMD_debug_mode', false);
-        $modeInput = $this->get_input(Domain::META_KEY_AUTH_TYPE, false);
         if (isset($squareData[ Domain::META_KEY_USING_OAUTH ]) && $squareData[ Domain::META_KEY_USING_OAUTH ]) {
-            if (isset($squareData[ Domain::META_KEY_LIVE_MODE ])
+            if (
+                isset($squareData[ Domain::META_KEY_LIVE_MODE ])
                 && $squareData[ Domain::META_KEY_LIVE_MODE ]
                 && $pmDebugMode
             ) {
@@ -204,7 +121,8 @@ class SettingsForm extends EE_Payment_Method_Form
                     ),
                     'ee4_square_live_connection_but_pm_debug_mode'
                 );
-            } elseif ((! isset($squareData[ Domain::META_KEY_LIVE_MODE ])
+            } elseif (
+                (! isset($squareData[ Domain::META_KEY_LIVE_MODE ])
                 || ! $squareData[ Domain::META_KEY_LIVE_MODE ])
                 && ! $pmDebugMode
             ) {
@@ -227,10 +145,6 @@ class SettingsForm extends EE_Payment_Method_Form
             // And if we're creating the form for receiving POST data, ignore debug mode input's value.
             if (method_exists($debugInput, 'isDisabled')) {
                 $debugInput->disable();
-            }
-            // Do the same for the Authentication type.
-            if (method_exists($modeInput, 'isDisabled')) {
-                $modeInput->disable();
             }
         }
         $debugInput->set_html_help_text(

@@ -529,9 +529,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
         }
         $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         $accessToken = $squarePm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
-        $authType = $squarePm->get_extra_meta(Domain::META_KEY_AUTH_TYPE, true);
-        if ($authType === 'oauth'
-            && isset($squareData[ Domain::META_KEY_USING_OAUTH ])
+        if (
+            isset($squareData[ Domain::META_KEY_USING_OAUTH ])
             && $squareData[ Domain::META_KEY_USING_OAUTH ]
             && ! empty($accessToken)
         ) {

@@ -10,9 +10,6 @@ jQuery(document).ready(function($) {
 	 *	form: object,
 	 *	connectBtnId: string,
 	 *	disconnectBtnId: string,
-	 *	appIdFieldId: string,
-	 * 	accessTokenFieldId: string,
-	 *	authenticationFieldId: string,
 	 *	connectSection: string,
 	 *	disconnectSection: string,
 	 *	formId: string,
@@ -50,11 +47,7 @@ jQuery(document).ready(function($) {
 		this.connectBtnId = '#eea_square_connect_btn_' + this.slug;
 		this.disconnectBtnId = '#eea_square_disconnect_btn_' + this.slug;
 		this.connectSectionId = '#eea_square_oauth_section_' + this.slug;
-		this.appIdFieldId = '#' + this.slug + '-app-id';
-		this.accessTokenFieldId = '#' + this.slug + '-access-token';
-		this.locationIdFieldId = '#' + this.slug + '-location-id';
 		this.useDwalletId = '#' + this.slug + '-use-dwallet';
-		this.authenticationFieldId = '#' + this.slug + '-authentication';
 		this.connectSection = 'eea-connect-section-' + this.slug;
 		this.disconnectSection = 'eea-disconnect-section-' + this.slug;
 		this.sandboxOauthedTextSection = 'eea_square_test_connected_txt_' + this.slug;
@@ -212,67 +205,6 @@ jQuery(document).ready(function($) {
 					console.error(squareParams.unknownContainer);
 				}
 			});
-
-			this.toggleNonApplicableInputs(this.form.parents('form').find(this.authenticationFieldId), false);
-			// Change listener for the Authentication type select.
-			$(this.authenticationFieldId).change(function(event) {
-				squarePmInstance.toggleNonApplicableInputs($(event.target), true);
-			});
-			// Change listener for the Digital Wallet toggle.
-			$(this.useDwalletId).change(function(event) {
-				squarePmInstance.toggleDwalletInputs($(event.target));
-			});
-		};
-
-		/**
-		 * Show/Hide the non OAuth inputs.
-		 * @function
-		 */
-		this.toggleNonApplicableInputs = function(target, toggleOauth) {
-			const targetForm = target.parents('form');
-			const appIdInput = targetForm.find(this.appIdFieldId).closest('tr');
-			const accessTokenInput = targetForm.find(this.accessTokenFieldId).closest('tr');
-			const locationIdInput = targetForm.find(this.locationIdFieldId).closest('tr');
-			const authenticationInput = targetForm.find(this.connectSectionId).closest('tr');
-			const digitalWalletToggle = targetForm.find(this.useDwalletId);
-
-			if (target.val() === 'personal') {
-				appIdInput.css('display', 'table-row');
-				accessTokenInput.css('display', 'table-row');
-				if (toggleOauth) {
-					authenticationInput.css('display', 'none');
-				}
-				// Double check the Digital Wallet toggle.
-				if (digitalWalletToggle.val() === '1') {
-					locationIdInput.css('display', 'table-row');
-				} else {
-					locationIdInput.css('display', 'none');
-				}
-			} else {
-				appIdInput.css('display', 'none');
-				accessTokenInput.css('display', 'none');
-				locationIdInput.css('display', 'none');
-				if (toggleOauth) {
-					authenticationInput.css('display', 'table-row');
-				}
-			}
-		};
-
-		/**
-		 * Show/Hide the Digital Wallet inputs.
-		 * @function
-		 */
-		this.toggleDwalletInputs = function(target) {
-			const targetForm = target.parents('form');
-			const oauthInput = targetForm.find(this.authenticationFieldId);
-			const locationIdInput = targetForm.find(this.locationIdFieldId).closest('tr');
-
-			// Hide the Digital Wallet required inputs.
-			if (target.val() === '1' && oauthInput.val() === 'personal') {
-				locationIdInput.css('display', 'table-row');
-			} else {
-				locationIdInput.css('display', 'none');
-			}
 		};
 
 		/**
@@ -492,14 +424,11 @@ jQuery(document).ready(function($) {
 				success: function(response) {
 					const connectSection = $('.' + squareInstance.connectSection);
 					const disconnectSection = $('.' + squareInstance.disconnectSection);
-					const authenticationField = $(squareInstance.authenticationFieldId);
 					$('#' + squareInstance.processingIconName).fadeOut('fast');
 					if (response.connected === true) {
 						connectSection.hide();
 						disconnectSection.show();
 						if (squareParams.canDisableInput) {
-							// Disable the authentication type selector.
-							authenticationField.prop('disabled', true);
 							// Disable the debug mode selector.
 							squareInstance.debugModeInput.prop('disabled', true);
 							squareInstance.debugModeInput.siblings('p.description').hide();
@@ -509,8 +438,6 @@ jQuery(document).ready(function($) {
 						connectSection.show();
 						disconnectSection.hide();
 						if (squareParams.canDisableInput) {
-							// Enable the authentication type selector.
-							authenticationField.prop('disabled', false);
 							// Enable the debug mode selector.
 							squareInstance.debugModeInput.prop('disabled', false);
 							squareInstance.debugModeInput.siblings('p.description').show();

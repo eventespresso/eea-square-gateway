@@ -118,9 +118,6 @@ class OAuthForm extends EE_Form_Section_Proper
         );
         $squareData = $this->thePmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
 
-        // Get the authentication type.
-        $authType = $this->thePmInstance->get_extra_meta(Domain::META_KEY_AUTH_TYPE, true);
-
         // Now get the OAuth status.
         $isOauthed = EED_SquareOnsiteOAuth::isAuthenticated($this->thePmInstance);
 
@@ -151,7 +148,7 @@ class OAuthForm extends EE_Form_Section_Proper
                 'eea_square_connect_' . $this->pmSlug,
                 'eea-connect-section-' . $this->pmSlug,
                 // Are we OAuth'ed ?
-                ($authType === 'personal' || $isOauthed) ? 'display:none;' : ''
+                $isOauthed ? 'display:none;' : ''
             )
         );
 
@@ -183,7 +180,7 @@ class OAuthForm extends EE_Form_Section_Proper
                 'eea_square_disconnect_' . $this->pmSlug,
                 'eea-disconnect-section-' . $this->pmSlug,
                 // Are we OAuth'ed ?
-                ($authType === 'personal' || ! $isOauthed) ? 'display:none;' : ''
+                ! $isOauthed ? 'display:none;' : ''
             )
         );
 
