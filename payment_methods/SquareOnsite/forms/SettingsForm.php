@@ -2,12 +2,9 @@
 
 namespace EventEspresso\Square\payment_methods\SquareOnsite\forms;
 
-use EE_Password_Input;
 use EE_Payment_Method_Form;
 use EE_PMT_SquareOnsite;
 use EE_Payment_Method;
-use EE_Select_Input;
-use EE_Text_Input;
 use EE_Yes_No_Input;
 use EventEspresso\Square\domain\Domain;
 use EE_Error;

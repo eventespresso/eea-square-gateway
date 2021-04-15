@@ -84,23 +84,25 @@ class EED_SquareOnsiteOAuth extends EED_Module
     public static function requestAccess()
     {
         // Check if this is the webhook from Square.
-        if (! isset($_GET['webhook_action'], $_GET['nonce'])
+        if (
+            ! isset($_GET['webhook_action'], $_GET['nonce'])
             || $_GET['webhook_action'] !== 'eea_square_grab_access_token'
         ) {
             // Not it. Ignore it.
             return;
         }
         // Check that we have all the required parameters and the nonce is ok.
-        if (! isset(
-            $_GET['square_slug'],
-            $_GET[ Domain::META_KEY_EXPIRES_AT ],
-            $_GET[ Domain::META_KEY_ACCESS_TOKEN ],
-            $_GET[ Domain::META_KEY_MERCHANT_ID ],
-            $_GET[ Domain::META_KEY_REFRESH_TOKEN ],
-            $_GET[ Domain::META_KEY_APPLICATION_ID ],
-            $_GET[ Domain::META_KEY_LIVE_MODE ],
-            $_GET[ Domain::META_KEY_LOCATION_ID ],
-        )
+        if (
+            ! isset(
+                $_GET['square_slug'],
+                $_GET[ Domain::META_KEY_EXPIRES_AT ],
+                $_GET[ Domain::META_KEY_ACCESS_TOKEN ],
+                $_GET[ Domain::META_KEY_MERCHANT_ID ],
+                $_GET[ Domain::META_KEY_REFRESH_TOKEN ],
+                $_GET[ Domain::META_KEY_APPLICATION_ID ],
+                $_GET[ Domain::META_KEY_LIVE_MODE ],
+                $_GET[ Domain::META_KEY_LOCATION_ID ],
+            )
             || ! wp_verify_nonce($_GET['nonce'], 'eea_square_grab_access_token')
         ) {
             // This is an error. Close the window.
@@ -168,7 +170,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $squareSlug = sanitize_key($_POST['submittedPm']);
         // Just save the debug mode option if it was changed..
         // It simplifies the rest of this process. PM settings might also not be saved after the OAuth process.
-        if (array_key_exists('debugMode', $_POST)
+        if (
+            array_key_exists('debugMode', $_POST)
             && in_array($_POST['debugMode'], ['0', '1'], true)
             && $square->debug_mode() !== (int) $_POST['debugMode']
         ) {
@@ -244,7 +247,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
             $accessToken = $square->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
         }
         $connected = true;
-        if (empty($accessToken)
+        if (
+            empty($accessToken)
             || ! isset($squareData[ Domain::META_KEY_USING_OAUTH ])
             || ! $squareData[ Domain::META_KEY_USING_OAUTH ]
         ) {
@@ -415,7 +419,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
             EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $response->get_error_message(), false);
         } else {
             $responseBody = (isset($response['body']) && $response['body']) ? json_decode($response['body']) : false;
-            if ($responseBody === false
+            if (
+                $responseBody === false
                 || (
                     isset($responseBody->error)
                     && strpos($responseBody->error_description, 'This application is not connected') === false
@@ -429,7 +434,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, false);
             }
 
-            if (! wp_verify_nonce($responseBody->nonce, 'eea_square_refresh_access_token')
+            if (
+                ! wp_verify_nonce($responseBody->nonce, 'eea_square_refresh_access_token')
                 || ! isset(
                     $responseBody->expires_at,
                     $responseBody->application_id,
@@ -467,6 +473,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
                     Domain::META_KEY_MERCHANT_ID   => sanitize_text_field($responseBody->merchant_id),
                     Domain::META_KEY_USING_OAUTH   => true,
                     Domain::META_KEY_THROTTLE_TIME => date("Y-m-d H:i:s"),
+                    Domain::META_KEY_LIVE_MODE     => $squarePm->debug_mode() ? '0' : '1',
                 ]
             );
         }
@@ -489,8 +496,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
             if (isset($squareData[ Domain::META_KEY_THROTTLE_TIME ]) && $squareData[ Domain::META_KEY_THROTTLE_TIME ]) {
                 $throttleTime = new DateTime($squareData[ Domain::META_KEY_THROTTLE_TIME ]);
                 $lastChecked = $now->diff($throttleTime)->format('%a');
-                // Throttle, allowing only once per 3 days.
-                if (intval($lastChecked) < 3) {
+                // Throttle, allowing only once per 2 days.
+                if (intval($lastChecked) < 2) {
                     return false;
                 }
             }
@@ -503,8 +510,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 $timeLeft = $now->diff($expiresAt);
                 $daysLeft = $timeLeft->format('%a');
 
-                // Request a refresh if less than 5 days left.
-                if (intval($daysLeft) <= 5) {
+                // Refresh the token on a 6th day or up.
+                if (intval($daysLeft) <= 24) {
                     EED_SquareOnsiteOAuth::refreshToken($squarePm);
                     return true;
                 }
