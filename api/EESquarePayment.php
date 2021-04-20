@@ -2,6 +2,11 @@
 
 namespace EventEspresso\Square\api;
 
+use EE_Error;
+use EE_Gateway;
+use EE_Payment;
+use ReflectionException;
+
 /**
  * Class EESquarePayment
  *
@@ -20,16 +25,39 @@ class EESquarePayment extends EESquareApiBase
     protected $squareToken = '';
 
     /**
-     * Square payment token.
+     * Square order ID.
      * @var string
      */
     protected $orderId = '';
 
 
     /**
+     *
+     * @param EE_Payment $payment
+     * @param EE_Gateway $gateway
+     * @param bool       $sandboxMode
+     * @throws EE_Error
+     * @throws ReflectionException
+     */
+    public function __construct(EE_Payment $payment, EE_Gateway $gateway, bool $sandboxMode)
+    {
+        // Set all the required properties.
+        $this->payment = $payment;
+        $this->gateway = $gateway;
+        $this->transaction = $payment->transaction();
+        $this->sandboxMode = $sandboxMode;
+        $transId = $this->transaction->ID();
+        $this->transactionId = (! empty($transId)) ? $transId : uniqid();
+        $this->preNumber = substr(number_format(time() * rand(2, 99999), 0, '', ''), 0, 30);
+
+        parent::__construct($sandboxMode);
+    }
+
+
+    /**
      * Create a Square Payment.
      *
-     * @return Object|string
+     * @return Object|array
      */
     public function create()
     {
@@ -41,7 +69,7 @@ class EESquarePayment extends EESquareApiBase
      * Complete the Payment.
      *
      * @param int $paymentId
-     * @return Object|string
+     * @return Object|array
      */
     public function complete($paymentId)
     {
@@ -53,7 +81,7 @@ class EESquarePayment extends EESquareApiBase
      * Make the API request.
      *
      * @param string $requestUrl
-     * @return Object|string
+     * @return Object|array
      */
     public function request($requestUrl)
     {
@@ -85,12 +113,16 @@ class EESquarePayment extends EESquareApiBase
 
         // Submit the payment.
         $response = $this->sendRequest($paymentBody, $requestUrl);
-        // If it's a string - it's an error. So pass that message further.
-        if (is_string($response)) {
+        // If it's an array - it's an error. So pass that further.
+        if (is_array($response) && isset($response['error'])) {
             return $response;
         }
         if (! isset($response->payment)) {
-            return esc_html__('Unexpected error. No order returned in Order create response.', 'event_espresso');
+            $request_error['error']['message'] = esc_html__(
+                'Unexpected error. No order returned in Order create response.',
+                'event_espresso'
+            );
+            return $request_error;
         }
         // Payment created ok, return it.
         return $response->payment;

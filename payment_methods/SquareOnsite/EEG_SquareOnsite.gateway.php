@@ -68,8 +68,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
 
         // Create an Order for this transaction.
         $order = $this->createAnOrder($payment);
-        if (is_string($order)) {
-            $errorMessage = (string) $order;
+        if (is_array($order) && isset($order['error'])) {
+            $errorMessage = (string) $order['error']['message'];
             $orderError = esc_html__('No order created !', 'event_espresso');
             return $this->setPaymentStatus($payment, $failedStatus, $orderError, $errorMessage);
         }
@@ -96,7 +96,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      * Create a Square Order for the transaction.
      *
      * @param EEI_Payment  $payment
-     * @return Object|string
+     * @return Object|array
      */
     public function createAnOrder($payment)
     {
@@ -110,12 +110,12 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
 
 
     /**
-     * Create a Square Order for the transaction.
+     * Create a Square Payment for the transaction.
      *
      * @param EEI_Payment  $payment
      * @param array        $billing_info
      * @param Object       $order
-     * @return Object|string
+     * @return Object
      */
     public function createPaymentObject($payment, $billing_info, $order)
     {
@@ -138,7 +138,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      * @param EEI_Payment  $payment
      * @param array        $billing_info
      * @param Object       $order
-     * @return Object|string
+     * @return EE_Payment
      */
     public function createAndProcessPayment($payment, $billing_info, $order = null)
     {
@@ -151,8 +151,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         $responsePayment = $squarePayment->create();
 
         // If it's a string - it's an error. So pass that message further.
-        if (is_string($responsePayment)) {
-            return $this->setPaymentStatus($payment, $failedStatus, '', $responsePayment);
+        if (is_array($responsePayment) && isset($responsePayment['error'])) {
+            return $this->setPaymentStatus($payment, $failedStatus, '', $responsePayment['error']['message']);
         }
 
         $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');

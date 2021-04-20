@@ -1,13 +1,10 @@
 <?php
 
-
 namespace EventEspresso\Square\api;
 
-use EE_Error;
 use EE_Gateway;
-use EEI_Payment;
+use EE_Payment;
 use EE_Transaction;
-use ReflectionException;
 
 /**
  * Class EESquareApiBase
@@ -21,7 +18,7 @@ use ReflectionException;
 abstract class EESquareApiBase
 {
     /**
-     * @var EEI_Payment The EE Payment for this API request.
+     * @var EE_Payment The EE Payment for this API request.
      */
     protected $payment;
 
@@ -81,23 +78,10 @@ abstract class EESquareApiBase
 
     /**
      *
-     * @param EEI_Payment $payment
-     * @param EE_Gateway  $gateway
-     * @param bool        $sandboxMode
-     * @throws EE_Error
-     * @throws ReflectionException
+     * @param bool $sandboxMode
      */
-    public function __construct(EEI_Payment $payment, EE_Gateway $gateway, $sandboxMode)
+    public function __construct(bool $sandboxMode)
     {
-        // Set all the required properties.
-        $this->payment = $payment;
-        $this->gateway = $gateway;
-        $this->sandboxMode = $sandboxMode;
-        $this->transaction = $payment->transaction();
-        $transId = $this->transaction->ID();
-        $this->transactionId = (! empty($transId)) ? $transId : uniqid();
-        $this->preNumber = substr(number_format(time() * rand(2, 99999), 0, '', ''), 0, 30);
-
         // Is this a sandbox request.
         $this->apiEndpoint = $this->sandboxMode
             ? 'https://connect.squareupsandbox.com/v2/'
@@ -108,14 +92,15 @@ abstract class EESquareApiBase
     /**
      * Do an API request.
      *
-     * @param array $bodyParameters
+     * @param array  $bodyParameters
      * @param string $postUrl
-     * @return Object|string
+     * @param string $method
+     * @return Object|array
      */
-    public function sendRequest(array $bodyParameters, $postUrl)
+    public function sendRequest(array $bodyParameters, string $postUrl, $method = 'POST')
     {
         $postParameters = [
-            'method'      => 'POST',
+            'method'      => $method,
             'timeout'     => 60,
             'redirection' => 5,
             'blocking'    => true,
@@ -123,34 +108,50 @@ abstract class EESquareApiBase
                 'Authorization' => 'Bearer ' . $this->accessToken,
                 'Content-Type'  => 'application/json',
             ],
-            'body'        => json_encode($bodyParameters)
         ];
+        // Add body if this is a POST request.
+        if ($method === 'POST') {
+            $postParameters['body'] = json_encode($bodyParameters);
+        }
         // Sent the request.
         $requestResult = wp_remote_post($postUrl, $postParameters);
         // Any errors ?
         if (is_wp_error($requestResult)) {
             $errMessage = $requestResult->get_error_messages();
-            return sprintf(
+            $request_error['error']['message'] = sprintf(
                 // translators: %1$s: An error message.
                 esc_html__('Request error encountered. Message: %1$s.', 'event_espresso'),
                 $errMessage
             );
+            $request_error['error']['code'] = $requestResult->get_error_code();
+            return $request_error;
         } elseif (! isset($requestResult['body'])) {
-            return esc_html__('No response body provided.', 'event_espresso');
+            $request_error['error']['message'] = esc_html__('No response body provided.', 'event_espresso');
+            $request_error['error']['code'] = 'no_body';
+            return $request_error;
         }
 
         // Ok, get the response data.
         $apiResponse = json_decode($requestResult['body']);
         if (! $apiResponse) {
-            return esc_html__('Unable to read the response body.', 'event_espresso');
+            $request_error['error']['message'] = esc_html__('Unable to read the response body.', 'event_espresso');
+            $request_error['error']['code'] = 'unrecognizable_body';
+            return $request_error;
         }
         // Check the data for errors.
         if (isset($apiResponse->errors)) {
-            $responseErrorMessage = '';
+            $responseErrorMessage = $responseErrorCode = '';
+            $errorCodes = [];
             foreach ($apiResponse->errors as $responseError) {
                 $responseErrorMessage .= $responseError->detail;
+                $errorCodes[] = $responseError->code;
             }
-            return $responseErrorMessage;
+            if ($errorCodes) {
+                $responseErrorCode = implode(',', $errorCodes);
+            }
+            $request_error['error']['message'] = $responseErrorMessage;
+            $request_error['error']['code'] = $responseErrorCode;
+            return $request_error;
         }
 
         // Ok, the response seems to be just right. Return the data.
@@ -173,7 +174,7 @@ abstract class EESquareApiBase
     /**
      * Get the payment.
      *
-     * @return EEI_Payment
+     * @return EE_Payment
      */
     public function payment()
     {

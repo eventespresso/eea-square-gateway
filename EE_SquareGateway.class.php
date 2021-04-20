@@ -34,15 +34,16 @@ class EE_SquareGateway extends EE_Addon
                 ],
                 // Register auto-loaders.
                 'autoloader_paths' => [
-                    'OAuthForm'       => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
+                    'OAuthForm'         => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
                         'SquareOnsite' . DS . 'forms' . DS . 'OAuthForm.php',
-                    'BillingForm'     => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
+                    'BillingForm'       => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
                         'SquareOnsite' . DS . 'forms' . DS . 'BillingForm.php',
-                    'SettingsForm'    => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
+                    'SettingsForm'      => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
                         'SquareOnsite' . DS . 'forms' . DS . 'SettingsForm.php',
-                    'EESquareApiBase' => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'api' . DS . 'EESquareApiBase.php',
-                    'EESquareOrder'   => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'api' . DS . 'EESquareOrder.php',
-                    'EESquarePayment' => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'api' . DS . 'EESquarePayment.php',
+                    'EESquareApiBase'   => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'api' . DS . 'EESquareApiBase.php',
+                    'EESquareOrder'     => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'api' . DS . 'EESquareOrder.php',
+                    'EESquarePayment'   => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'api' . DS . 'EESquarePayment.php',
+                    'EESquareLocations' => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'api' . DS . 'EESquareLocations.php',
                 ],
                 'module_paths' => [
                     EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'modules' . DS . 'EED_SquareOnsiteOAuth.module.php',

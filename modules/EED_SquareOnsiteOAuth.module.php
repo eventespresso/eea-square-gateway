@@ -348,7 +348,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
         } else {
             $responseBody = (isset($response['body']) && $response['body']) ? json_decode($response['body']) : false;
             // For any error (besides already being disconnected), give an error response.
-            if ($responseBody === false
+            if (
+                $responseBody === false
                 || (
                     isset($responseBody->error)
                     && strpos($responseBody->error_description, 'This application is not connected') === false
@@ -461,7 +462,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             );
             $squarePm->update_extra_meta(
                 Domain::META_KEY_LOCATION_ID,
-                sanitize_text_field($responseBody->application_id)
+                sanitize_text_field($responseBody->location_id)
             );
 
             // Some PM data is combined to reduce DB calls.

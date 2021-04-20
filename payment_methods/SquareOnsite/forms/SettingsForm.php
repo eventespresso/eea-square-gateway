@@ -6,6 +6,7 @@ use EE_Payment_Method_Form;
 use EE_PMT_SquareOnsite;
 use EE_Payment_Method;
 use EE_Yes_No_Input;
+use EventEspresso\Square\api\EESquareLocations;
 use EventEspresso\Square\domain\Domain;
 use EE_Error;
 use EE_Form_Section_HTML;
@@ -99,23 +100,31 @@ class SettingsForm extends EE_Payment_Method_Form
         $pmDebugMode = $pmInstance->debug_mode();
         $debugInput = $this->get_input('PMD_debug_mode', false);
         if (isset($squareData[ Domain::META_KEY_USING_OAUTH ]) && $squareData[ Domain::META_KEY_USING_OAUTH ]) {
+            // First check the credentials and the API connection
+            $oauthHealthCheck = $this->oauthHealthCheck($pmInstance);
+            // and reset the OAuth connection in case we are no longer authorized for some reason.
+            if (isset($oauthHealthCheck['error']) && $oauthHealthCheck['error']['code'] === 'UNAUTHORIZED') {
+                $oauthReset = $this->resetOauthSettings($pmInstance);
+                if ($oauthReset) {
+                    $this->doValidationError(
+                        'The OAuth %1$sauthorization was revoked%2$s so the connection was reset. Please re-authorize (Connect) for the Square payment method to function properly.',
+                        'eea_square_oauth_connection_was_reset'
+                    );
+                } else {
+                    $this->doValidationError(
+                        'There was an error while doing the authorization health check. Please re-authorize (Connect) for the Square payment method to function properly.',
+                        'eea_square_oauth_connection_reset_request'
+                    );
+                }
+            }
+
             if (
                 isset($squareData[ Domain::META_KEY_LIVE_MODE ])
                 && $squareData[ Domain::META_KEY_LIVE_MODE ]
                 && $pmDebugMode
             ) {
-                $this->add_validation_error(
-                    sprintf(
-                        // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
-                        esc_html__(
-                            // @codingStandardsIgnoreStart
-                            '%1$sSquare Payment Method%2$s is in debug mode but the authentication with %1$sSquare%2$s is in Live mode. Payments will not be processed correctly! If you wish to test this payment method, please reset the connection and use sandbox credentials to authenticate with Square.',
-                            // @codingStandardsIgnoreEnd
-                            'event_espresso'
-                        ),
-                        '<strong>',
-                        '</strong>'
-                    ),
+                $this->doValidationError(
+                    '%1$sSquare Payment Method%2$s is in debug mode but the authentication with %1$sSquare%2$s is in Live mode. Payments will not be processed correctly! If you wish to test this payment method, please reset the connection and use sandbox credentials to authenticate with Square.',
                     'ee4_square_live_connection_but_pm_debug_mode'
                 );
             } elseif (
@@ -123,18 +132,8 @@ class SettingsForm extends EE_Payment_Method_Form
                 || ! $squareData[ Domain::META_KEY_LIVE_MODE ])
                 && ! $pmDebugMode
             ) {
-                $this->add_validation_error(
-                    sprintf(
-                        // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
-                        esc_html__(
-                            // @codingStandardsIgnoreStart
-                            '%1$sSquare Payment Method%2$s is in live mode but the authentication with %1$sSquare%2$s is in sandbox mode. Payments will not be processed correctly! If you wish to process real payments with this payment method, please reset the connection and use live credentials to authenticate with Square.',
-                            // @codingStandardsIgnoreEnd
-                            'event_espresso'
-                        ),
-                        '<strong>',
-                        '</strong>'
-                    ),
+                $this->doValidationError(
+                    '%1$sSquare Payment Method%2$s is in live mode but the authentication with %1$sSquare%2$s is in sandbox mode. Payments will not be processed correctly! If you wish to process real payments with this payment method, please reset the connection and use live credentials to authenticate with Square.',
                     'ee4_square_sandbox_connection_but_pm_not_in_debug_mode'
                 );
             }
@@ -151,6 +150,108 @@ class SettingsForm extends EE_Payment_Method_Form
                 'You cannot enable or disable debug mode while connected. First disconnect, then change debug mode.',
                 'event_espresso'
             )
+        );
+    }
+
+
+    /**
+     * Checks if the OAuth credentials are still healthy and we are authorized.
+     *
+     * @param EE_Payment_Method $pmInstance
+     * @return array ['healthy' => true] | ['error' => ['message' => 'the_message', 'code' => 'the_code']]
+     */
+    public function oauthHealthCheck(EE_Payment_Method $pmInstance)
+    {
+        // Request a list of locations.
+        $locations = $this->getMechantLocations($pmInstance);
+        if (is_array($locations) && isset($locations['error'])) {
+            switch ($locations['error']['code']) {
+                case 'UNAUTHORIZED':
+                case 'ACCESS_TOKEN_EXPIRED':
+                case 'ACCESS_TOKEN_REVOKED':
+                case 'INSUFFICIENT_SCOPES':
+                    // We have an error. Put it under UNAUTHORIZED category for easy identification.
+                    $locations['error']['code'] = 'UNAUTHORIZED';
+                    return $locations;
+                default:
+                    return $locations;
+            }
+        }
+        return ['healthy' => true];
+    }
+
+
+    /**
+     * Get merchant locations from Square.
+     *
+     * @param EE_Payment_Method $pmInstance
+     * @return Object|array
+     */
+    public function getMechantLocations(EE_Payment_Method $pmInstance)
+    {
+        try {
+            $accessToken = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
+            $appId = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true);
+            $locationId = $pmInstance->get_extra_meta(Domain::META_KEY_LOCATION_ID, true);
+            $dWallet = $pmInstance->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true);
+        } catch (EE_Error | ReflectionException $e) {
+            $error['error']['message'] = $e->getMessage();
+            $error['error']['code'] = $e->getCode();
+            return $error;
+        }
+        // Create the API object/helper.
+        $listsApi = new EESquareLocations($pmInstance->debug_mode());
+        $listsApi->setApplicationId($appId);
+        $listsApi->setAccessToken($accessToken);
+        $listsApi->setUseDwallet($dWallet);
+        $listsApi->setLocationId($locationId);
+        return $listsApi->list();
+    }
+
+
+    /**
+     * Resets all that OAuth related settings.
+     *
+     * @param EE_Payment_Method $pmInstance
+     * @return boolean
+     * @throws ReflectionException
+     */
+    public function resetOauthSettings(EE_Payment_Method $pmInstance)
+    {
+        try {
+            $pmInstance->delete_extra_meta(Domain::META_KEY_APPLICATION_ID);
+            $pmInstance->delete_extra_meta(Domain::META_KEY_ACCESS_TOKEN);
+            $pmInstance->delete_extra_meta(Domain::META_KEY_LOCATION_ID);
+            $pmInstance->update_extra_meta(
+                Domain::META_KEY_SQUARE_DATA,
+                [
+                    Domain::META_KEY_USING_OAUTH => false,
+                ]
+            );
+        } catch (EE_Error $e) {
+            return false;
+        }
+        return true;
+    }
+
+
+    /**
+     * This simply adds the form validation error.
+     *
+     * @param string $errorMessage has to have two placeholders for the bold text.
+     * @param string $errorName
+     * @return void
+     */
+    protected function doValidationError(string $errorMessage, string $errorName)
+    {
+        $this->add_validation_error(
+            sprintf(
+                // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
+                esc_html__($errorMessage, 'event_espresso'),
+                '<strong>',
+                '</strong>'
+            ),
+            $errorName
         );
     }
 }
