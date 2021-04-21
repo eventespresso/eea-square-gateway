@@ -82,6 +82,7 @@ abstract class EESquareApiBase
      */
     public function __construct(bool $sandboxMode)
     {
+        $this->sandboxMode = $sandboxMode;
         // Is this a sandbox request.
         $this->apiEndpoint = $this->sandboxMode
             ? 'https://connect.squareupsandbox.com/v2/'
@@ -114,7 +115,7 @@ abstract class EESquareApiBase
             $postParameters['body'] = json_encode($bodyParameters);
         }
         // Sent the request.
-        $requestResult = wp_remote_post($postUrl, $postParameters);
+        $requestResult = wp_remote_request($postUrl, $postParameters);
         // Any errors ?
         if (is_wp_error($requestResult)) {
             $errMessage = $requestResult->get_error_messages();

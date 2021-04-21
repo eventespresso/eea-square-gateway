@@ -103,16 +103,21 @@ class SettingsForm extends EE_Payment_Method_Form
             // First check the credentials and the API connection
             $oauthHealthCheck = $this->oauthHealthCheck($pmInstance);
             // and reset the OAuth connection in case we are no longer authorized for some reason.
-            if (isset($oauthHealthCheck['error']) && $oauthHealthCheck['error']['code'] === 'UNAUTHORIZED') {
-                $oauthReset = $this->resetOauthSettings($pmInstance);
-                if ($oauthReset) {
-                    $this->doValidationError(
-                        'The OAuth %1$sauthorization was revoked%2$s so the connection was reset. Please re-authorize (Connect) for the Square payment method to function properly.',
-                        'eea_square_oauth_connection_was_reset'
-                    );
+            if (isset($oauthHealthCheck['error'])) {
+                if ($oauthHealthCheck['error']['code'] === 'NOT_AUTHORIZED') {
+                    // Seems like the Token got revoked or outdated, reset the connection.
+                    $oauthReset = $this->resetOauthSettings($pmInstance);
+                    if ($oauthReset) {
+                        $this->doValidationError(
+                            'The OAuth %1$sauthorization was revoked%2$s so the connection was reset. Please re-authorize (Connect) for the Square payment method to function properly.',
+                            'eea_square_oauth_connection_was_reset'
+                        );
+                    }
                 } else {
                     $this->doValidationError(
-                        'There was an error while doing the authorization health check. Please re-authorize (Connect) for the Square payment method to function properly.',
+                        'There was an error while doing the authorization health check: "'
+                            . $oauthHealthCheck['error']['message']
+                            . '". Please re-authorize (Connect) for the Square payment method to function properly.',
                         'eea_square_oauth_connection_reset_request'
                     );
                 }
@@ -166,12 +171,11 @@ class SettingsForm extends EE_Payment_Method_Form
         $locations = $this->getMechantLocations($pmInstance);
         if (is_array($locations) && isset($locations['error'])) {
             switch ($locations['error']['code']) {
-                case 'UNAUTHORIZED':
                 case 'ACCESS_TOKEN_EXPIRED':
                 case 'ACCESS_TOKEN_REVOKED':
                 case 'INSUFFICIENT_SCOPES':
-                    // We have an error. Put it under UNAUTHORIZED category for easy identification.
-                    $locations['error']['code'] = 'UNAUTHORIZED';
+                    // We have an error. Put it under NOT_AUTHORIZED category for easy identification.
+                    $locations['error']['code'] = 'NOT_AUTHORIZED';
                     return $locations;
                 default:
                     return $locations;
