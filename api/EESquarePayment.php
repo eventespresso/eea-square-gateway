@@ -97,14 +97,15 @@ class EESquarePayment extends EESquareApiBase
                 'currency' => $this->payment->currency_code()
             ],
             'location_id'     => $this->locationId,
-            'reference_id'    => $referenceId
+            'reference_id'    => $referenceId,
         ];
 
         $paymentBody['note'] = sprintf(
-            // translators: %1$s: site name; %2$s: payment name.
-            esc_html__('Event Registrations from %1$s for %2$s', "event_espresso"),
+            // translators: %1$s: event name, %2$s: site name, %3$s: transaction ID.
+            esc_html__('%1$s - %2$s, Transaction %3$s', 'event_espresso'),
+            $this->payment->get_first_event_name(),
             wp_specialchars_decode(get_bloginfo(), ENT_QUOTES),
-            $this->payment->get_first_event_name()
+            $this->transaction->ID()
         );
         // Do we have an order to associate with this payment.
         if ($this->orderId) {
