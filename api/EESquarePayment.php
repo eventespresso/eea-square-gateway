@@ -101,9 +101,8 @@ class EESquarePayment extends EESquareApiBase
         ];
 
         $paymentBody['note'] = sprintf(
-            // translators: %1$s: event name, %2$s: site name, %3$s: transaction ID.
-            esc_html__('%1$s - %2$s, Transaction %3$s', 'event_espresso'),
-            $this->payment->get_first_event_name(),
+            // translators: %1$s: site name, %2$s: transaction ID.
+            esc_html__('Event Espresso - %1$s, Transaction %2$s', 'event_espresso'),
             wp_specialchars_decode(get_bloginfo(), ENT_QUOTES),
             $this->transaction->ID()
         );
