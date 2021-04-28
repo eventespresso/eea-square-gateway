@@ -462,11 +462,12 @@ jQuery(document).ready(function($) {
 						// Also show the locations dropdown.
 						if (typeof response.location !== 'undefined' && response.location) {
 							let selected = '';
-							response.locationList.each(function(listId, listName) {
+							locationsSelect.empty();
+							$.each(response.locationList, function(listId, listName) {
 								if (listId === response.location) {
 									selected = 'selected';
 								}
-								locationsSelect.empty().append(
+								locationsSelect.append(
 									'<option selected="' + selected + '" value="' + listId + '">' + listName + '</option>'
 								);
 								// Reset the 'selected' flag, just to be safe.

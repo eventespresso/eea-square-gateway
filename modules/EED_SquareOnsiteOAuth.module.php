@@ -518,7 +518,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         // Get all the locations.
         $locationsList = [];
         foreach ($locations as $location) {
-            $locationsList[ $location['id'] ] = $location['name'];
+            $locationsList[ $location->id ] = $location->name;
         }
 
         // And update the locations option/dropdown.
@@ -637,10 +637,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
         }
         $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         $accessToken = $squarePm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
+        $locationId = $squarePm->get_extra_meta(Domain::META_KEY_LOCATION_ID, true);
         if (
             isset($squareData[ Domain::META_KEY_USING_OAUTH ])
             && $squareData[ Domain::META_KEY_USING_OAUTH ]
             && ! empty($accessToken)
+            && $locationId
         ) {
             return true;
         }
