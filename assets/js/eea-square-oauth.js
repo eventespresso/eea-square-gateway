@@ -50,6 +50,7 @@ jQuery(document).ready(function($) {
 		this.useDwalletId = '#' + this.slug + '-use-dwallet';
 		this.connectSection = 'eea-connect-section-' + this.slug;
 		this.disconnectSection = 'eea-disconnect-section-' + this.slug;
+		this.locationsSelect = 'eea-locations-select-' + this.slug;
 		this.sandboxOauthedTextSection = 'eea_square_test_connected_txt_' + this.slug;
 		this.formId = '#' + squareInstanceVars.formId;
 		this.processingIconName = 'espresso-ajax-loading';
@@ -110,6 +111,9 @@ jQuery(document).ready(function($) {
 				squarePmInstance.updateBtnText($(this), true);
 			});
 
+			// Hide dropdown inputs if there is no data in them.
+			this.toggleNoDataInputs(this.form);
+
 			// Connect with Square.
 			this.connectBtn.on('click', function(event) {
 				event.preventDefault();
@@ -118,7 +122,7 @@ jQuery(document).ready(function($) {
 				if (buttonContainer && submittingForm) {
 					// Check if window already open.
 					if (squarePmInstance.oauthWindow &&
-						 ! squarePmInstance.oauthWindow.closed
+						! squarePmInstance.oauthWindow.closed
 					) {
 						squarePmInstance.oauthWindow.focus();
 						return;
@@ -130,7 +134,7 @@ jQuery(document).ready(function($) {
 					let wWidth = screen.width / 2;
 					wWidth = wWidth > 1200 ? 1200 : wWidth;
 					wWidth = wWidth < 380 ? 380 : wWidth;
-					const parameters = [
+					let parameters = [
 						'location=0',
 						'height=' + wHeight,
 						'width=' + wWidth,
@@ -154,7 +158,7 @@ jQuery(document).ready(function($) {
 								'<span class="ee-spinner ee-spin">' +
 								'</div></body></html>'
 							);
-							const eeLoader = squarePmInstance.oauthWindow.document.getElementById(
+							let eeLoader = squarePmInstance.oauthWindow.document.getElementById(
 								squarePmInstance.processingIconName
 							);
 							eeLoader.style.display = 'inline-block';
@@ -205,6 +209,24 @@ jQuery(document).ready(function($) {
 					console.error(squareParams.unknownContainer);
 				}
 			});
+		};
+
+		/**
+		 * Show/Hide no data inputs.
+		 * @function
+		 */
+		this.toggleNoDataInputs = function(target) {
+			const targetForm = target.parents('form');
+			const locationsSelect = targetForm.find('.' + this.locationsSelect).first();
+			const locationsList = locationsSelect.find('option').length;
+			const locationsSection = targetForm.find('.' + this.locationsSelect).closest('tr');
+
+			// Hide if no options in the dropdown select.
+			if (locationsList < 1) {
+				locationsSection.hide();
+			} else if (! locationsSection.is(':visible')) {
+				locationsSection.show();
+			}
 		};
 
 		/**
@@ -424,8 +446,10 @@ jQuery(document).ready(function($) {
 				success: function(response) {
 					const connectSection = $('.' + squareInstance.connectSection);
 					const disconnectSection = $('.' + squareInstance.disconnectSection);
-					$('#' + squareInstance.processingIconName).fadeOut('fast');
-					if (response.connected === true) {
+					const locationsSelect = $('.' + squareInstance.locationsSelect);
+					const locationsSection = locationsSelect.closest('tr');
+
+					if (typeof response.connected !== 'undefined' && response.connected) {
 						connectSection.hide();
 						disconnectSection.show();
 						if (squareParams.canDisableInput) {
@@ -434,16 +458,39 @@ jQuery(document).ready(function($) {
 							squareInstance.debugModeInput.siblings('p.description').hide();
 							squareInstance.debugModeInput.siblings('p.disabled-description').show();
 						}
+
+						// Also show the locations dropdown.
+						if (typeof response.location !== 'undefined' && response.location) {
+							let selected = '';
+							response.locationList.each(function(listId, listName) {
+								if (listId === response.location) {
+									selected = 'selected';
+								}
+								locationsSelect.empty().append(
+									'<option selected="' + selected + '" value="' + listId + '">' + listName + '</option>'
+								);
+								// Reset the 'selected' flag, just to be safe.
+								selected = '';
+							});
+							locationsSection.show();
+						}
 					} else {
 						connectSection.show();
 						disconnectSection.hide();
+						locationsSection.hide();
 						if (squareParams.canDisableInput) {
 							// Enable the debug mode selector.
 							squareInstance.debugModeInput.prop('disabled', false);
 							squareInstance.debugModeInput.siblings('p.description').show();
 							squareInstance.debugModeInput.siblings('p.disabled-description').hide();
 						}
+						if (typeof response.error !== 'undefined') {
+							console.error(response.error);
+							alert(response.error);
+						}
 					}
+
+					$('#' + squareInstance.processingIconName).fadeOut('fast');
 				},
 			} );
 		};

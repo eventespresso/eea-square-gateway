@@ -34,8 +34,7 @@ class Domain
     public const META_KEY_EXPIRES_AT = 'expires_at';
 
     /**
-     * Name of the Extra Meta that stores whether or not the above credentials were provided by Square or directly
-     * entered into this plugin. If it doesn't exist, they were manually entered.
+     * Name of the Extra Meta that stores whether or not the merchant is authenticated.
      */
     public const META_KEY_USING_OAUTH = 'using_square_oauth';
 
@@ -55,6 +54,11 @@ class Domain
     public const META_KEY_LOCATION_ID = 'location_id';
 
     /*
+     * Name of the Extra Meta key that stores the merchant locations list.
+     */
+    public const META_KEY_LOCATIONS_LIST = 'locations_list';
+
+    /*
      * Name of the Extra Meta that stores the option for enabling the Square Digital Wallet (Google Pay and Apple Pay).
      */
     public const META_KEY_USE_DIGITAL_WALLET = 'use_dwallet';
@@ -66,7 +70,8 @@ class Domain
 
     /*
      * Name of the Extra Meta key that stores a few options as one meta (combined).
-     * These are saved under this key: refresh_token, expires_at, merchant_id, using_square_oauth, throttle_time.
+     * These are saved under this key:
+     * refresh_token, expires_at, merchant_id, using_square_oauth, throttle_time, locations_list.
      */
     public const META_KEY_SQUARE_DATA = 'square_data';
 }

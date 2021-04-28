@@ -5,8 +5,9 @@ namespace EventEspresso\Square\payment_methods\SquareOnsite\forms;
 use EE_Payment_Method_Form;
 use EE_PMT_SquareOnsite;
 use EE_Payment_Method;
+use EE_Select_Input;
 use EE_Yes_No_Input;
-use EventEspresso\Square\api\EESquareLocations;
+use EED_SquareOnsiteOAuth;
 use EventEspresso\Square\domain\Domain;
 use EE_Error;
 use EE_Form_Section_HTML;
@@ -54,6 +55,32 @@ class SettingsForm extends EE_Payment_Method_Form
                 ),
             ]
         ];
+
+        // Check the Locations list and display the select input if a list is present.
+        $accessToken = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
+        $squareData = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
+        $locationsList = isset($squareData[ Domain::META_KEY_LOCATIONS_LIST ])
+            ? $squareData[ Domain::META_KEY_LOCATIONS_LIST ]
+            : [];
+        if ($accessToken) {
+            $pmFormParams['extra_meta_inputs'][ Domain::META_KEY_LOCATION_ID ] = new EE_Select_Input(
+                $locationsList,
+                [
+                    'html_label_text' => sprintf(
+                        esc_html__('Merchant Location %s', 'event_espresso'),
+                        $paymentMethod->get_help_tab_link()
+                    ),
+                    'html_help_text'  => esc_html__(
+                        'Select the location you want your payments to be associated with.',
+                        'event_espresso'
+                    ),
+                    'html_class'      => 'eea-locations-select-' . $pmInstance->slug(),
+                    'default'         => 'main',
+                    'required'        => true,
+                ]
+            );
+        }
+
         // Build the PM form.
         parent::__construct($pmFormParams);
 
@@ -168,7 +195,7 @@ class SettingsForm extends EE_Payment_Method_Form
     public function oauthHealthCheck(EE_Payment_Method $pmInstance)
     {
         // Request a list of locations.
-        $locations = $this->getMechantLocations($pmInstance);
+        $locations = EED_SquareOnsiteOAuth::getMerchantLocations($pmInstance);
         if (is_array($locations) && isset($locations['error'])) {
             switch ($locations['error']['code']) {
                 case 'ACCESS_TOKEN_EXPIRED':
@@ -182,34 +209,6 @@ class SettingsForm extends EE_Payment_Method_Form
             }
         }
         return ['healthy' => true];
-    }
-
-
-    /**
-     * Get merchant locations from Square.
-     *
-     * @param EE_Payment_Method $pmInstance
-     * @return Object|array
-     */
-    public function getMechantLocations(EE_Payment_Method $pmInstance)
-    {
-        try {
-            $accessToken = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
-            $appId = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true);
-            $locationId = $pmInstance->get_extra_meta(Domain::META_KEY_LOCATION_ID, true);
-            $dWallet = $pmInstance->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true);
-        } catch (EE_Error | ReflectionException $e) {
-            $error['error']['message'] = $e->getMessage();
-            $error['error']['code'] = $e->getCode();
-            return $error;
-        }
-        // Create the API object/helper.
-        $listsApi = new EESquareLocations($pmInstance->debug_mode());
-        $listsApi->setApplicationId($appId);
-        $listsApi->setAccessToken($accessToken);
-        $listsApi->setUseDwallet($dWallet);
-        $listsApi->setLocationId($locationId);
-        return $listsApi->list();
     }
 
 

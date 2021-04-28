@@ -1,5 +1,6 @@
 <?php
 
+use EventEspresso\Square\api\EESquareLocations;
 use EventEspresso\Square\domain\Domain;
 use EventEspresso\core\exceptions\InvalidDataTypeException;
 use EventEspresso\core\exceptions\InvalidInterfaceException;
@@ -92,6 +93,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
             return;
         }
         // Check that we have all the required parameters and the nonce is ok.
+        if (! wp_verify_nonce($_GET['nonce'], 'eea_square_grab_access_token')) {
+            // This is an error. Close the window.
+            EED_SquareOnsiteOAuth::closeOauthWindow(esc_html__('Nonce fail!', 'event_espresso'));
+        }
         if (
             ! isset(
                 $_GET['square_slug'],
@@ -101,12 +106,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 $_GET[ Domain::META_KEY_REFRESH_TOKEN ],
                 $_GET[ Domain::META_KEY_APPLICATION_ID ],
                 $_GET[ Domain::META_KEY_LIVE_MODE ],
-                $_GET[ Domain::META_KEY_LOCATION_ID ],
             )
-            || ! wp_verify_nonce($_GET['nonce'], 'eea_square_grab_access_token')
         ) {
-            // This is an error. Close the window.
-            EED_SquareOnsiteOAuth::closeOauthWindow(esc_html__('Nonce fail!', 'event_espresso'));
+            // Missing parameters for some reason. Can't proceed.
+            EED_SquareOnsiteOAuth::closeOauthWindow(esc_html__('Missing OAuth required parameters.', 'event_espresso'));
         }
 
         // Get pm data.
@@ -114,7 +117,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         if (! $squarePm instanceof EE_Payment_Method) {
             EED_SquareOnsiteOAuth::closeOauthWindow(
                 esc_html__(
-                    'Could not specify the payment method!',
+                    'Could not specify the payment method !',
                     'event_espresso'
                 )
             );
@@ -127,10 +130,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $squarePm->update_extra_meta(
             Domain::META_KEY_APPLICATION_ID,
             sanitize_text_field($_GET[ Domain::META_KEY_APPLICATION_ID ])
-        );
-        $squarePm->update_extra_meta(
-            Domain::META_KEY_LOCATION_ID,
-            sanitize_text_field($_GET[ Domain::META_KEY_LOCATION_ID ])
         );
         $squarePm->update_extra_meta(
             Domain::META_KEY_SQUARE_DATA,
@@ -157,7 +156,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @throws InvalidInterfaceException
      * @throws InvalidDataTypeException
      * @throws EE_Error
-     * @throws ReflectionException
      */
     public static function getConnectionData()
     {
@@ -240,22 +238,36 @@ class EED_SquareOnsiteOAuth extends EED_Module
     public static function updateConnectionStatus()
     {
         $accessToken = null;
-        $squareData = [];
+        $squareData = $locationsList = [];
         $square = EED_SquareOnsiteOAuth::getSubmittedPm($_POST);
         if ($square) {
             $squareData = $square->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
             $accessToken = $square->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
         }
-        $connected = true;
+        $connected = $defaultLocation = false;
         if (
-            empty($accessToken)
-            || ! isset($squareData[ Domain::META_KEY_USING_OAUTH ])
-            || ! $squareData[ Domain::META_KEY_USING_OAUTH ]
+            $accessToken
+            && isset($squareData[ Domain::META_KEY_USING_OAUTH ])
+            && $squareData[ Domain::META_KEY_USING_OAUTH ]
         ) {
-            $connected = false;
+            // Refresh the locations list.
+            $locationsList = EED_SquareOnsiteOAuth::updateLocationsList($square);
+            // Check for an error
+            if (isset($locationsList['error'])) {
+                echo wp_json_encode([
+                    'error' => $locationsList['error']['message'],
+                ]);
+                exit();
+            }
+
+            // And update the location ID if not set.
+            $defaultLocation = EED_SquareOnsiteOAuth::updateLocation($square, $locationsList);
+            $connected = true;
         }
         echo wp_json_encode([
-            'connected' => $connected,
+            'connected'    => $connected,
+            'location'     => $defaultLocation,
+            'locationList' => $locationsList,
         ]);
         exit();
     }
@@ -460,10 +472,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 Domain::META_KEY_ACCESS_TOKEN,
                 sanitize_text_field($responseBody->access_token)
             );
-            $squarePm->update_extra_meta(
-                Domain::META_KEY_LOCATION_ID,
-                sanitize_text_field($responseBody->location_id)
-            );
 
             // Some PM data is combined to reduce DB calls.
             $squarePm->update_extra_meta(
@@ -477,7 +485,97 @@ class EED_SquareOnsiteOAuth extends EED_Module
                     Domain::META_KEY_LIVE_MODE     => $squarePm->debug_mode() ? '0' : '1',
                 ]
             );
+
+            // Also refresh the locations list.
+            $locationsList = EED_SquareOnsiteOAuth::updateLocationsList($squarePm);
+            // Did we really get an error ?
+            if (isset($locationsList['error'])) {
+                EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $locationsList['error']['message'], false);
+            }
+
+            // And update the location ID if not set.
+            $defaultLocation = EED_SquareOnsiteOAuth::updateLocation($squarePm, $locationsList);
         }
+    }
+
+
+    /**
+     * Update the list of locations and set the 'main' location as a default location.
+     *
+     * @param EE_Payment_Method $squarePm
+     * @return array
+     * @throws EE_Error
+     * @throws ReflectionException
+     */
+    public static function updateLocationsList(EE_Payment_Method $squarePm)
+    {
+        $locations = EED_SquareOnsiteOAuth::getMerchantLocations($squarePm);
+        if (! is_array($locations) || isset($locations['error'])) {
+            // We got an error.
+            return $locations;
+        }
+
+        // Get all the locations.
+        $locationsList = [];
+        foreach ($locations as $location) {
+            $locationsList[ $location['id'] ] = $location['name'];
+        }
+
+        // And update the locations option/dropdown.
+        $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
+        $squareData[ Domain::META_KEY_LOCATIONS_LIST ] = $locationsList;
+        $squarePm->update_extra_meta(Domain::META_KEY_SQUARE_DATA, $squareData);
+
+        return $locationsList;
+    }
+
+
+    /**
+     * Update the location in case it's not set or not in the updated locations list.
+     *
+     * @param EE_Payment_Method $squarePm
+     * @param array             $locationsList
+     * @return string
+     * @throws EE_Error
+     * @throws ReflectionException
+     */
+    public static function updateLocation(EE_Payment_Method $squarePm, array $locationsList)
+    {
+        // Check if the selected location is saved, just in case merchant forgot to hit save.
+        $location = $squarePm->get_extra_meta(Domain::META_KEY_LOCATION_ID, true);
+        if (! $location || ! isset($locationsList[ $location ])) {
+            $defaultLocation = reset($locationsList);
+            $squarePm->update_extra_meta(Domain::META_KEY_LOCATION_ID, $defaultLocation);
+            return $defaultLocation;
+        }
+
+        return '';
+    }
+
+
+    /**
+     * Get merchant locations from Square.
+     *
+     * @param EE_Payment_Method $pmInstance
+     * @return Object|array
+     */
+    public static function getMerchantLocations(EE_Payment_Method $pmInstance)
+    {
+        try {
+            $accessToken = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
+            $appId = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true);
+            $dWallet = $pmInstance->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true);
+        } catch (EE_Error | ReflectionException $e) {
+            $error['error']['message'] = $e->getMessage();
+            $error['error']['code'] = $e->getCode();
+            return $error;
+        }
+        // Create the API object/helper.
+        $listsApi = new EESquareLocations($pmInstance->debug_mode());
+        $listsApi->setApplicationId($appId);
+        $listsApi->setAccessToken($accessToken);
+        $listsApi->setUseDwallet($dWallet);
+        return $listsApi->list();
     }
 
 
@@ -486,6 +584,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
      *
      * @param EE_Payment_Method $squarePm
      * @return boolean
+     * @throws EE_Error
+     * @throws ReflectionException
      */
     public static function checkAndRefreshToken($squarePm)
     {
@@ -552,9 +652,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * Log an error, return a json message and exit.
      *
      * @param EE_Payment_Method|boolean $squarePm
-     * @param string $errMsg
-     * @param bool $doExit Should we echo json and exit
+     * @param null                      $errMsg
+     * @param bool                      $doExit Should we echo json and exit
      * @return void
+     * @throws EE_Error
      */
     public static function errorLogAndExit($squarePm, $errMsg = null, $doExit = true)
     {
@@ -582,8 +683,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function closeOauthWindow($msg = null)
     {
-        $js_out = '
-        <script type="text/javascript">';
+        $js_out = '<script type="text/javascript">';
         if (! empty($msg)) {
             $js_out .= '
                 if ( window.opener ) {
@@ -596,8 +696,9 @@ class EED_SquareOnsiteOAuth extends EED_Module
             ';
         }
         $js_out .= 'window.opener = self;
-        window.close();
-        </script>';
+            window.close();
+            </script>';
+
         echo $js_out;
         die();
     }
