@@ -544,7 +544,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         // Check if the selected location is saved, just in case merchant forgot to hit save.
         $location = $squarePm->get_extra_meta(Domain::META_KEY_LOCATION_ID, true);
         if (! $location || ! isset($locationsList[ $location ])) {
-            $defaultLocation = reset($locationsList);
+            $defaultLocation = array_key_first($locationsList);
             $squarePm->update_extra_meta(Domain::META_KEY_LOCATION_ID, $defaultLocation);
             return $defaultLocation;
         }
