@@ -5,7 +5,6 @@ namespace EventEspresso\Square\api;
 use EE_Error;
 use EE_Gateway;
 use EE_Payment;
-use EE_Transaction;
 use ReflectionException;
 
 /**
@@ -30,21 +29,6 @@ class EESquarePayment extends EESquareApiBase
      * @var string
      */
     protected $orderId = '';
-
-    /**
-     * @var EE_Transaction The current transaction that's using this API.
-     */
-    protected $transaction;
-
-    /**
-     * @var int The transaction ID.
-     */
-    protected $transactionId;
-
-    /**
-     * @var int A prefix for for the idempotency key.
-     */
-    protected $preNumber;
 
 
     /**
@@ -200,38 +184,5 @@ class EESquarePayment extends EESquareApiBase
     {
         $keyPrefix = $this->sandboxMode ? 'TEST-payment' : 'event-payment';
         return $keyPrefix . '-' . $this->preNumber() . '-' . $this->transactionId();
-    }
-
-
-    /**
-     * Get the transaction.
-     *
-     * @return EE_Transaction
-     */
-    public function transaction()
-    {
-        return $this->transaction;
-    }
-
-
-    /**
-     * Get the transactionId.
-     *
-     * @return int
-     */
-    public function transactionId()
-    {
-        return $this->transactionId;
-    }
-
-
-    /**
-     * Get the preNumber.
-     *
-     * @return int
-     */
-    public function preNumber()
-    {
-        return $this->preNumber;
     }
 }

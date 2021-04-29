@@ -6,7 +6,6 @@ use EE_Error;
 use EE_Gateway;
 use EE_Line_Item;
 use EE_Registry;
-use EE_Transaction;
 use EEH_Money;
 use EE_Payment;
 use ReflectionException;
@@ -22,22 +21,6 @@ use ReflectionException;
  */
 class EESquareOrder extends EESquareApiBase
 {
-    /**
-     * @var EE_Transaction The current transaction that's using this API.
-     */
-    protected $transaction;
-
-    /**
-     * @var int The transaction ID.
-     */
-    protected $transactionId;
-
-    /**
-     * @var int A prefix for for the idempotency key.
-     */
-    protected $preNumber;
-
-
     /**
      *
      * @param EE_Payment $payment
@@ -313,38 +296,5 @@ class EESquareOrder extends EESquareApiBase
     {
         $keyPrefix = $this->sandboxMode ? 'TEST-payment' : 'event-payment';
         return $keyPrefix . '-' . $this->preNumber() . '-' . $this->transactionId();
-    }
-
-
-    /**
-     * Get the transaction.
-     *
-     * @return EE_Transaction
-     */
-    public function transaction()
-    {
-        return $this->transaction;
-    }
-
-
-    /**
-     * Get the transactionId.
-     *
-     * @return int
-     */
-    public function transactionId()
-    {
-        return $this->transactionId;
-    }
-
-
-    /**
-     * Get the preNumber.
-     *
-     * @return int
-     */
-    public function preNumber()
-    {
-        return $this->preNumber;
     }
 }
