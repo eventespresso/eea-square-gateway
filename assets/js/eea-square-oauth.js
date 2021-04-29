@@ -480,6 +480,7 @@ jQuery(document).ready(function($) {
 								// Reset the 'selected' flag, just to be safe.
 								selected = '';
 							});
+							locationsSelect.prop('disabled', false);
 							locationsSection.show();
 						}
 					} else {

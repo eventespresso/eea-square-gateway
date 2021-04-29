@@ -56,30 +56,27 @@ class SettingsForm extends EE_Payment_Method_Form
             ]
         ];
 
-        // Check the Locations list and display the select input if a list is present.
-        $accessToken = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
+        // Check the Locations list and display the select input.
         $squareData = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         $locationsList = isset($squareData[ Domain::META_KEY_LOCATIONS_LIST ])
             ? $squareData[ Domain::META_KEY_LOCATIONS_LIST ]
             : [];
-        if ($accessToken) {
-            $pmFormParams['extra_meta_inputs'][ Domain::META_KEY_LOCATION_ID ] = new EE_Select_Input(
-                $locationsList,
-                [
-                    'html_label_text' => sprintf(
-                        esc_html__('Merchant Location %s', 'event_espresso'),
-                        $paymentMethod->get_help_tab_link()
-                    ),
-                    'html_help_text'  => esc_html__(
-                        'Select the location you want your payments to be associated with.',
-                        'event_espresso'
-                    ),
-                    'html_class'      => 'eea-locations-select-' . $pmInstance->slug(),
-                    'default'         => 'main',
-                    'required'        => true,
-                ]
-            );
-        }
+        $pmFormParams['extra_meta_inputs'][ Domain::META_KEY_LOCATION_ID ] = new EE_Select_Input(
+            $locationsList,
+            [
+                'html_label_text' => sprintf(
+                    esc_html__('Merchant Location %s', 'event_espresso'),
+                    $paymentMethod->get_help_tab_link()
+                ),
+                'html_help_text'  => esc_html__(
+                    'Select the location you want your payments to be associated with.',
+                    'event_espresso'
+                ),
+                'html_class'      => 'eea-locations-select-' . $pmInstance->slug(),
+                'default'         => 'main',
+                'required'        => true,
+            ]
+        );
 
         // Build the PM form.
         parent::__construct($pmFormParams);
@@ -126,6 +123,16 @@ class SettingsForm extends EE_Payment_Method_Form
         $squareData = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         $pmDebugMode = $pmInstance->debug_mode();
         $debugInput = $this->get_input('PMD_debug_mode', false);
+        $locationsSelect = $this->get_input(Domain::META_KEY_LOCATION_ID, false);
+        $locationsList = isset($squareData[ Domain::META_KEY_LOCATIONS_LIST ])
+            ? $squareData[ Domain::META_KEY_LOCATIONS_LIST ]
+            : false;
+
+        // Disable the locations select if list is empty.
+        if (! $locationsList) {
+            $locationsSelect->disable();
+        }
+
         if (isset($squareData[ Domain::META_KEY_USING_OAUTH ]) && $squareData[ Domain::META_KEY_USING_OAUTH ]) {
             // First check the credentials and the API connection
             $oauthHealthCheck = $this->oauthHealthCheck($pmInstance);
