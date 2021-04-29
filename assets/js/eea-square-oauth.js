@@ -28,6 +28,7 @@ jQuery(document).ready(function($) {
 	 *	errorResponse: string,
 	 *	oauthRequestErrorText: string,
 	 *	unknownContainer: string,
+	 *	refreshAlert: string,
 	 *	pmNiceName: string,
 	 *	espressoDefaultStyles: string,
 	 *	wpStylesheet: string,
@@ -347,6 +348,9 @@ jQuery(document).ready(function($) {
 					squareError = response.squareError;
 				}
 				console.error(squareError);
+				if (typeof response.alert !== 'undefined' && response.alert) {
+					alert(squareParams.refreshAlert);
+				}
 
 				// Display the error in the pop-up.
 				if (this.oauthWindow) {
@@ -377,6 +381,8 @@ jQuery(document).ready(function($) {
 			if (description) {
 				squareError = squareError + ': ' + description;
 			}
+			$('#' + this.processingIconName).fadeOut('fast');
+			console.error(squareError);
 			// Display the error in the pop-up.
 			if (this.oauthWindow) {
 				this.oauthWindow.document.getElementById(
@@ -385,8 +391,9 @@ jQuery(document).ready(function($) {
 				$(this.oauthWindow.document.body).html(squareError);
 				this.oauthWindow = null;
 			}
-			$('#' + this.processingIconName).fadeOut('fast');
-			console.error(squareError);
+			if (typeof response.alert !== 'undefined' && response.alert) {
+				alert(squareParams.refreshAlert);
+			}
 		};
 
 		/**
@@ -460,7 +467,7 @@ jQuery(document).ready(function($) {
 						}
 
 						// Also show the locations dropdown.
-						if (typeof response.location !== 'undefined' && response.location) {
+						if (typeof response.location !== 'undefined' && response.location && Object.keys(response.locationList).length > 0) {
 							let selected = '';
 							locationsSelect.empty();
 							$.each(response.locationList, function(listId, listName) {

@@ -219,6 +219,10 @@ class OAuthForm extends EE_Form_Section_Proper
             'errorResponse'         => esc_html__('Error response received', 'event_espresso'),
             'oauthRequestErrorText' => esc_html__('OAuth request Error.', 'event_espresso'),
             'unknownContainer'      => esc_html__('Could not specify the parent form.', 'event_espresso'),
+            'refreshAlert'          => esc_html__(
+                'There was an unexpected error. Please refresh the page.',
+                'event_espresso'
+            ),
             'pmNiceName'            => esc_html__('Square Payments', 'event_espresso'),
             'connectBtnText'        => $this->oauthBtnText,
             'connectBtnSandboxText' => $this->oauthBtnSandboxText,

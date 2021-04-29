@@ -318,6 +318,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             echo wp_json_encode(
                 [
                     'squareError' => esc_html__('Could not specify the connected merchant.', 'event_espresso'),
+                    'alert'       => true,
                 ]
             );
             exit();
@@ -356,7 +357,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $response = wp_remote_post($postUrl, $postArgs);
 
         if (is_wp_error($response)) {
-            EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $response->get_error_message());
+            EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $response->get_error_message(), true, true);
         } else {
             $responseBody = (isset($response['body']) && $response['body']) ? json_decode($response['body']) : false;
             // For any error (besides already being disconnected), give an error response.
@@ -373,7 +374,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
                     $errMsg = esc_html__('Unknown response received!', 'event_espresso');
                 }
 
-                EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg);
+                EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, true, true);
             }
         }
 
@@ -659,10 +660,11 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @param EE_Payment_Method|boolean $squarePm
      * @param null                      $errMsg
      * @param bool                      $doExit Should we echo json and exit
+     * @param bool                      $alert Tells frontend to show an alert or not
      * @return void
      * @throws EE_Error
      */
-    public static function errorLogAndExit($squarePm, $errMsg = null, $doExit = true)
+    public static function errorLogAndExit($squarePm, $errMsg = null, $doExit = true, $alert = false)
     {
         if ($squarePm instanceof EE_Payment_Method) {
             $squarePm->type_obj()->get_gateway()->log(
@@ -674,6 +676,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         if ($doExit) {
             echo wp_json_encode([
                 'squareError' => $errMsg,
+                'alert'       => $alert,
             ]);
             exit();
         }
