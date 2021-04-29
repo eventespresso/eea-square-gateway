@@ -135,16 +135,29 @@ class SettingsForm extends EE_Payment_Method_Form
                     // Seems like the Token got revoked or outdated, reset the connection.
                     $oauthReset = $this->resetOauthSettings($pmInstance);
                     if ($oauthReset) {
-                        $this->doValidationError(
-                            'The OAuth %1$sauthorization was revoked%2$s so the connection was reset. Please re-authorize (Connect) for the Square payment method to function properly.',
+                        $this->add_validation_error(
+                            sprintf(
+                                // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
+                                esc_html__(
+                                    'The OAuth %1$sauthorization was revoked%2$s so the connection was reset. Please re-authorize (Connect) for the Square payment method to function properly.',
+                                    'event_espresso'
+                                ),
+                                '<strong>',
+                                '</strong>'
+                            ),
                             'eea_square_oauth_connection_was_reset'
                         );
                     }
                 } else {
-                    $this->doValidationError(
-                        'There was an error while doing the authorization health check: "'
-                            . $oauthHealthCheck['error']['message']
-                            . '". Please re-authorize (Connect) for the Square payment method to function properly.',
+                    $this->add_validation_error(
+                        sprintf(
+                            // translators: %1$s: the error message.
+                            esc_html__(
+                                'There was an error while doing the authorization health check: "%1$s". Please re-authorize (Connect) for the Square payment method to function properly.',
+                                'event_espresso'
+                            ),
+                            $oauthHealthCheck['error']['message']
+                        ),
                         'eea_square_oauth_connection_reset_request'
                     );
                 }
@@ -155,8 +168,16 @@ class SettingsForm extends EE_Payment_Method_Form
                 && $squareData[ Domain::META_KEY_LIVE_MODE ]
                 && $pmDebugMode
             ) {
-                $this->doValidationError(
-                    '%1$sSquare Payment Method%2$s is in debug mode but the authentication with %1$sSquare%2$s is in Live mode. Payments will not be processed correctly! If you wish to test this payment method, please reset the connection and use sandbox credentials to authenticate with Square.',
+                $this->add_validation_error(
+                    sprintf(
+                        // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
+                        esc_html__(
+                            '%1$sSquare Payment Method%2$s is in debug mode but the authentication with %1$sSquare%2$s is in Live mode. Payments will not be processed correctly! If you wish to test this payment method, please reset the connection and use sandbox credentials to authenticate with Square.',
+                            'event_espresso'
+                        ),
+                        '<strong>',
+                        '</strong>'
+                    ),
                     'ee4_square_live_connection_but_pm_debug_mode'
                 );
             } elseif (
@@ -164,8 +185,16 @@ class SettingsForm extends EE_Payment_Method_Form
                 || ! $squareData[ Domain::META_KEY_LIVE_MODE ])
                 && ! $pmDebugMode
             ) {
-                $this->doValidationError(
-                    '%1$sSquare Payment Method%2$s is in live mode but the authentication with %1$sSquare%2$s is in sandbox mode. Payments will not be processed correctly! If you wish to process real payments with this payment method, please reset the connection and use live credentials to authenticate with Square.',
+                $this->add_validation_error(
+                    sprintf(
+                        // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
+                        esc_html__(
+                            '%1$sSquare Payment Method%2$s is in live mode but the authentication with %1$sSquare%2$s is in sandbox mode. Payments will not be processed correctly! If you wish to process real payments with this payment method, please reset the connection and use live credentials to authenticate with Square.',
+                            'event_espresso'
+                        ),
+                        '<strong>',
+                        '</strong>'
+                    ),
                     'ee4_square_sandbox_connection_but_pm_not_in_debug_mode'
                 );
             }
@@ -235,26 +264,5 @@ class SettingsForm extends EE_Payment_Method_Form
             return false;
         }
         return true;
-    }
-
-
-    /**
-     * This simply adds the form validation error.
-     *
-     * @param string $errorMessage has to have two placeholders for the bold text.
-     * @param string $errorName
-     * @return void
-     */
-    protected function doValidationError(string $errorMessage, string $errorName)
-    {
-        $this->add_validation_error(
-            sprintf(
-                // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
-                esc_html__($errorMessage, 'event_espresso'),
-                '<strong>',
-                '</strong>'
-            ),
-            $errorName
-        );
     }
 }
