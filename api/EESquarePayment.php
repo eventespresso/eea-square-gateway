@@ -5,6 +5,7 @@ namespace EventEspresso\Square\api;
 use EE_Error;
 use EE_Gateway;
 use EE_Payment;
+use EE_Transaction;
 use ReflectionException;
 
 /**
@@ -19,16 +20,41 @@ use ReflectionException;
 class EESquarePayment extends EESquareApiBase
 {
     /**
+     * @var EE_Payment The EE Payment for this API request.
+     */
+    protected EE_Payment $payment;
+
+    /**
+     * @var EE_Gateway The EE gateway.
+     */
+    protected EE_Gateway $gateway;
+
+    /**
      * Square payment token.
      * @var string
      */
-    protected $squareToken = '';
+    protected string $squareToken = '';
 
     /**
      * Square order ID.
      * @var string
      */
-    protected $orderId = '';
+    protected string $orderId = '';
+
+    /**
+     * @var EE_Transaction The current transaction that's using this API.
+     */
+    protected EE_Transaction $transaction;
+
+    /**
+     * @var int The transaction ID.
+     */
+    protected int $transactionId;
+
+    /**
+     * @var int A prefix for for the idempotency key.
+     */
+    protected int $preNumber;
 
 
     /**
@@ -172,5 +198,72 @@ class EESquarePayment extends EESquareApiBase
     public function setOrderId($orderId)
     {
         $this->orderId = $orderId;
+    }
+
+
+    /**
+     * Get the payment.
+     *
+     * @return EE_Payment
+     */
+    public function payment()
+    {
+        return $this->payment;
+    }
+
+
+    /**
+     * Get the gateway.
+     *
+     * @return EE_Gateway
+     */
+    public function gateway()
+    {
+        return $this->gateway;
+    }
+
+
+    /**
+     * Generate the Idempotency key for the API call.
+     *
+     * @return string
+     */
+    public function getIdempotencyKey()
+    {
+        $keyPrefix = $this->sandboxMode ? 'TEST-payment' : 'event-payment';
+        return $keyPrefix . '-' . $this->preNumber() . '-' . $this->transactionId();
+    }
+
+
+    /**
+     * Get the transaction.
+     *
+     * @return EE_Transaction
+     */
+    public function transaction()
+    {
+        return $this->transaction;
+    }
+
+
+    /**
+     * Get the transactionId.
+     *
+     * @return int
+     */
+    public function transactionId()
+    {
+        return $this->transactionId;
+    }
+
+
+    /**
+     * Get the preNumber.
+     *
+     * @return int
+     */
+    public function preNumber()
+    {
+        return $this->preNumber;
     }
 }

@@ -2,10 +2,6 @@
 
 namespace EventEspresso\Square\api;
 
-use EE_Gateway;
-use EE_Payment;
-use EE_Transaction;
-
 /**
  * Class EESquareApiBase
  *
@@ -18,62 +14,37 @@ use EE_Transaction;
 abstract class EESquareApiBase
 {
     /**
-     * @var EE_Payment The EE Payment for this API request.
-     */
-    protected $payment;
-
-    /**
-     * @var EE_Gateway The EE gateway.
-     */
-    protected $gateway;
-
-    /**
-     * @var EE_Transaction The current transaction that's using this API.
-     */
-    protected $transaction;
-
-    /**
-     * @var int The transaction ID.
-     */
-    protected $transactionId;
-
-    /**
-     * @var int The transaction ID.
-     */
-    protected $preNumber;
-
-    /**
      * @var bool Debug mode on or not ?
      */
-    protected $sandboxMode;
+    protected bool $sandboxMode;
 
     /**
      * @var string Square API endpoint.
      */
-    protected $apiEndpoint = '';
+    protected string $apiEndpoint = '';
 
     /**
      * @var string Square API location ID.
      */
-    protected $locationId = '';
+    protected string $locationId = '';
 
     /**
      * Square Application ID used in API calls.
      * @var string
      */
-    protected $applicationId = '';
+    protected string $applicationId = '';
 
     /**
      * Square Access Token that is used to process payments.
      * @var string
      */
-    protected $accessToken = '';
+    protected string $accessToken = '';
 
     /**
      * Square use Digital Wallet.
      * @var string
      */
-    protected $useDwallet = '';
+    protected string $useDwallet = '';
 
 
     /**
@@ -157,73 +128,6 @@ abstract class EESquareApiBase
 
         // Ok, the response seems to be just right. Return the data.
         return $apiResponse;
-    }
-
-
-    /**
-     * Generate the Idempotency key for the API call.
-     *
-     * @return string
-     */
-    public function getIdempotencyKey()
-    {
-        $keyPrefix = $this->sandboxMode ? 'TEST-payment' : 'event-payment';
-        return $keyPrefix . '-' . $this->preNumber() . '-' . $this->transactionId();
-    }
-
-
-    /**
-     * Get the payment.
-     *
-     * @return EE_Payment
-     */
-    public function payment()
-    {
-        return $this->payment;
-    }
-
-
-    /**
-     * Get the payment.
-     *
-     * @return EE_Gateway
-     */
-    public function gateway()
-    {
-        return $this->gateway;
-    }
-
-
-    /**
-     * Get the transaction.
-     *
-     * @return EE_Transaction
-     */
-    public function transaction()
-    {
-        return $this->transaction;
-    }
-
-
-    /**
-     * Get the transactionId.
-     *
-     * @return int
-     */
-    public function transactionId()
-    {
-        return $this->transactionId;
-    }
-
-
-    /**
-     * Get the preNumber.
-     *
-     * @return int
-     */
-    public function preNumber()
-    {
-        return $this->preNumber;
     }
 
 
