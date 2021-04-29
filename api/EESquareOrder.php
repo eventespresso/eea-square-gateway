@@ -23,16 +23,6 @@ use ReflectionException;
 class EESquareOrder extends EESquareApiBase
 {
     /**
-     * @var EE_Payment The EE Payment for this API request.
-     */
-    protected $payment;
-
-    /**
-     * @var EE_Gateway The EE gateway.
-     */
-    protected $gateway;
-
-    /**
      * @var EE_Transaction The current transaction that's using this API.
      */
     protected $transaction;
@@ -311,28 +301,6 @@ class EESquareOrder extends EESquareApiBase
         }
         // Order created ok, return it.
         return $createOrderResponse->order;
-    }
-
-
-    /**
-     * Get the payment.
-     *
-     * @return EE_Payment
-     */
-    public function payment()
-    {
-        return $this->payment;
-    }
-
-
-    /**
-     * Get the gateway.
-     *
-     * @return EE_Gateway
-     */
-    public function gateway()
-    {
-        return $this->gateway;
     }
 
 

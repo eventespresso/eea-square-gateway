@@ -20,16 +20,6 @@ use ReflectionException;
 class EESquarePayment extends EESquareApiBase
 {
     /**
-     * @var EE_Payment The EE Payment for this API request.
-     */
-    protected $payment;
-
-    /**
-     * @var EE_Gateway The EE gateway.
-     */
-    protected $gateway;
-
-    /**
      * Square payment token.
      * @var string
      */
@@ -170,7 +160,7 @@ class EESquarePayment extends EESquareApiBase
      * Set Square payment Token.
      *
      * @param string $squareToken
-     * @return string
+     * @return void
      */
     public function setsquareToken($squareToken)
     {
@@ -193,33 +183,11 @@ class EESquarePayment extends EESquareApiBase
      * Set Square payment Token.
      *
      * @param string $orderId
-     * @return string
+     * @return void
      */
     public function setOrderId($orderId)
     {
         $this->orderId = $orderId;
-    }
-
-
-    /**
-     * Get the payment.
-     *
-     * @return EE_Payment
-     */
-    public function payment()
-    {
-        return $this->payment;
-    }
-
-
-    /**
-     * Get the gateway.
-     *
-     * @return EE_Gateway
-     */
-    public function gateway()
-    {
-        return $this->gateway;
     }
 
 

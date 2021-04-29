@@ -2,6 +2,9 @@
 
 namespace EventEspresso\Square\api;
 
+use EE_Gateway;
+use EE_Payment;
+
 /**
  * Class EESquareApiBase
  *
@@ -13,6 +16,16 @@ namespace EventEspresso\Square\api;
  */
 abstract class EESquareApiBase
 {
+    /**
+     * @var EE_Payment The EE Payment for this API request.
+     */
+    protected $payment;
+
+    /**
+     * @var EE_Gateway The EE gateway.
+     */
+    protected $gateway;
+
     /**
      * @var bool Debug mode on or not ?
      */
@@ -132,10 +145,32 @@ abstract class EESquareApiBase
 
 
     /**
+     * Get the payment.
+     *
+     * @return EE_Payment
+     */
+    public function payment()
+    {
+        return $this->payment;
+    }
+
+
+    /**
+     * Get the gateway.
+     *
+     * @return EE_Gateway
+     */
+    public function gateway()
+    {
+        return $this->gateway;
+    }
+
+
+    /**
      * Set Square Application ID used in API calls.
      *
      * @param string $applicationId
-     * @return string
+     * @return void
      */
     public function setApplicationId($applicationId)
     {
@@ -147,7 +182,7 @@ abstract class EESquareApiBase
      * Set Square Access Token that is used to process payments.
      *
      * @param string $accessToken
-     * @return string
+     * @return void
      */
     public function setAccessToken($accessToken)
     {
@@ -159,7 +194,7 @@ abstract class EESquareApiBase
      * Set Square use Digital Wallet.
      *
      * @param string $useDwallet
-     * @return string
+     * @return void
      */
     public function setUseDwallet($useDwallet)
     {
@@ -171,7 +206,7 @@ abstract class EESquareApiBase
      * Set Square Application Location ID.
      *
      * @param string $locationId
-     * @return string
+     * @return void
      */
     public function setLocationId($locationId)
     {
