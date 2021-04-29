@@ -16,35 +16,35 @@ abstract class EESquareApiBase
     /**
      * @var bool Debug mode on or not ?
      */
-    protected bool $sandboxMode;
+    protected $sandboxMode;
 
     /**
      * @var string Square API endpoint.
      */
-    protected string $apiEndpoint = '';
+    protected $apiEndpoint = '';
 
     /**
      * @var string Square API location ID.
      */
-    protected string $locationId = '';
+    protected $locationId = '';
 
     /**
      * Square Application ID used in API calls.
      * @var string
      */
-    protected string $applicationId = '';
+    protected $applicationId = '';
 
     /**
      * Square Access Token that is used to process payments.
      * @var string
      */
-    protected string $accessToken = '';
+    protected $accessToken = '';
 
     /**
      * Square use Digital Wallet.
      * @var string
      */
-    protected string $useDwallet = '';
+    protected $useDwallet = '';
 
 
     /**

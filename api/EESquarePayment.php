@@ -22,39 +22,39 @@ class EESquarePayment extends EESquareApiBase
     /**
      * @var EE_Payment The EE Payment for this API request.
      */
-    protected EE_Payment $payment;
+    protected $payment;
 
     /**
      * @var EE_Gateway The EE gateway.
      */
-    protected EE_Gateway $gateway;
+    protected $gateway;
 
     /**
      * Square payment token.
      * @var string
      */
-    protected string $squareToken = '';
+    protected $squareToken = '';
 
     /**
      * Square order ID.
      * @var string
      */
-    protected string $orderId = '';
+    protected $orderId = '';
 
     /**
      * @var EE_Transaction The current transaction that's using this API.
      */
-    protected EE_Transaction $transaction;
+    protected $transaction;
 
     /**
      * @var int The transaction ID.
      */
-    protected int $transactionId;
+    protected $transactionId;
 
     /**
      * @var int A prefix for for the idempotency key.
      */
-    protected int $preNumber;
+    protected $preNumber;
 
 
     /**
