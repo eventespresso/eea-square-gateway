@@ -32,7 +32,7 @@
                 <?php esc_html_e('Create payments and refunds', 'event_espresso'); ?>
             </li>
             <li>
-                <?php esc_html_e('Create payments and refunds', 'event_espresso'); ?>
+                <?php esc_html_e('Read my payment history', 'event_espresso'); ?>
             </li>
             <li>
                 <?php esc_html_e('Update and Create Square orders', 'event_espresso'); ?>
