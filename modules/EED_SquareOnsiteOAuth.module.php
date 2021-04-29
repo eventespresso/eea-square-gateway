@@ -518,7 +518,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
         // Get all the locations.
         $locationsList = [];
         foreach ($locations as $location) {
-            $locationsList[ $location->id ] = $location->name;
+            // Only allow locations that have the credit card processing capability.
+            if (in_array('CREDIT_CARD_PROCESSING', $location->capabilities)) {
+                $locationsList[ $location->id ] = $location->name;
+            }
         }
 
         // And update the locations option/dropdown.
