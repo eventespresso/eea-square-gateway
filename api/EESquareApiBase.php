@@ -75,6 +75,11 @@ abstract class EESquareApiBase
      */
     protected $preNumber;
 
+    /**
+     * @var string The Square API version that requests are sent to.
+     */
+    protected $api_version = '2020-11-18';
+
 
     /**
      *
@@ -106,8 +111,9 @@ abstract class EESquareApiBase
             'redirection' => 5,
             'blocking'    => true,
             'headers'     => [
-                'Authorization' => 'Bearer ' . $this->accessToken,
-                'Content-Type'  => 'application/json',
+                'Square-Version' => $this->api_version,
+                'Authorization'  => 'Bearer ' . $this->accessToken,
+                'Content-Type'   => 'application/json',
             ],
         ];
         // Add body if this is a POST request.
