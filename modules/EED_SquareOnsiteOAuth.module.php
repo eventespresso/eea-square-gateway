@@ -346,6 +346,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             'blocking'    => true,
             'body'        => [
                 'merchant_id' => $squareMerchantId,
+                'api_version' => Domain::SQUARE_API_VERSION,
             ],
         ];
         if (defined('LOCAL_MIDDLEMAN_SERVER')) {
@@ -419,6 +420,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             'body'        => [
                 'refresh_token' => $squareRefreshToken,
                 'nonce'         => $nonce,
+                'api_version'   => Domain::SQUARE_API_VERSION,
             ],
         ];
         if (defined('LOCAL_MIDDLEMAN_SERVER')) {
@@ -456,7 +458,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
                     $responseBody->access_token,
                     $responseBody->refresh_token,
                     $responseBody->merchant_id,
-                    $responseBody->location_id,
                 )
             ) {
                 // This is an error.

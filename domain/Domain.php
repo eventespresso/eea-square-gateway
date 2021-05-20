@@ -74,4 +74,9 @@ class Domain
      * refresh_token, expires_at, merchant_id, using_square_oauth, throttle_time, locations_list.
      */
     public const META_KEY_SQUARE_DATA = 'square_data';
+
+    /*
+     * Holds the Square API version used in this integration.
+     */
+    public const SQUARE_API_VERSION = '2020-11-18';
 }

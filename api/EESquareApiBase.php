@@ -5,6 +5,7 @@ namespace EventEspresso\Square\api;
 use EE_Gateway;
 use EE_Payment;
 use EE_Transaction;
+use EventEspresso\Square\domain\Domain;
 
 /**
  * Class EESquareApiBase
@@ -75,11 +76,6 @@ abstract class EESquareApiBase
      */
     protected $preNumber;
 
-    /**
-     * @var string The Square API version that requests are sent to.
-     */
-    protected $api_version = '2020-11-18';
-
 
     /**
      *
@@ -111,7 +107,7 @@ abstract class EESquareApiBase
             'redirection' => 5,
             'blocking'    => true,
             'headers'     => [
-                'Square-Version' => $this->api_version,
+                'Square-Version' => Domain::SQUARE_API_VERSION,
                 'Authorization'  => 'Bearer ' . $this->accessToken,
                 'Content-Type'   => 'application/json',
             ],
