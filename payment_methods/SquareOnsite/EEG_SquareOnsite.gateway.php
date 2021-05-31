@@ -55,7 +55,6 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
     public function do_direct_payment($payment, $billing_info = [])
     {
         $failedStatus = $this->_pay_model->failed_status();
-        $approvedStatus = $this->_pay_model->approved_status();
         $declinedStatus = $this->_pay_model->declined_status();
         // A default error message just in case.
         $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');
@@ -76,7 +75,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
 
         // Now create the Payment.
         $processedPayment = $this->createAndProcessPayment($payment, $billing_info, $order);
-        if ($processedPayment instanceof EE_Payment && $processedPayment->status() === $approvedStatus) {
+        if ($processedPayment instanceof EE_Payment) {
             return $processedPayment;
         }
 
@@ -143,7 +142,6 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      */
     public function createAndProcessPayment($payment, $billing_info, $order = null)
     {
-        $failedStatus = $this->_pay_model->failed_status();
         $approvedStatus = $this->_pay_model->approved_status();
         $declinedStatus = $this->_pay_model->declined_status();
 
@@ -153,7 +151,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
 
         // If it's a string - it's an error. So pass that message further.
         if (is_array($responsePayment) && isset($responsePayment['error'])) {
-            return $this->setPaymentStatus($payment, $failedStatus, '', $responsePayment['error']['message']);
+            return $this->setPaymentStatus($payment, $declinedStatus, '', $responsePayment['error']['message']);
         }
 
         $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');

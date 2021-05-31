@@ -68,6 +68,7 @@ jQuery(document).ready(function($) {
 		this.applePayButton = {};
 		this.doSca = false;
 		this.squarePayments = {};
+		this.sqCardContainer = {};
 
 
 		/**
@@ -103,6 +104,10 @@ jQuery(document).ready(function($) {
 
 			// Has the Square gateway has been selected ? Or already initialized ?
 			if (this.initialized) {
+				// Re-build the PM form in case SPCO disassembled the PM form.
+				if (! this.sqCardContainer.length) {
+					this.buildSquarePaymentForm();
+				}
 				return;
 			}
 
@@ -126,6 +131,7 @@ jQuery(document).ready(function($) {
 			this.paymentMethodInfoDiv = $('#spco-payment-method-info-squareonsite');
 			this.paymentNonceInput = $('#eea-square-nonce');
 			this.paymentVerificationInput = $('#eea-square-sca');
+			this.sqCardContainer = $('.sq-card-iframe-container');
 			this.txnId = eeaSquareParameters.txnId;
 			this.billingForm = $(this.billingFormId);
 			this.googlePayButton = this.paymentForm.find(this.googlePayButtonId).first();
@@ -432,6 +438,7 @@ jQuery(document).ready(function($) {
 				// Tokenize the payment method.
 				this.tokenizePayment(this.paymentMethod);
 			} else {
+				// Don't enable the SPCO submit button after this message.
 				this.spco.allow_enable_submit_buttons = false;
 				let notification = this.spco.generate_message_object('', '', eeaSquareParameters.formValidationNotice);
 				this.spco.scroll_to_top_and_display_messages(this.paymentMethodInfoDiv, notification, true);
@@ -474,47 +481,6 @@ jQuery(document).ready(function($) {
 		}
 
 
-
-		/**
-		 * @function createWalletPayment
-		 * @return object
-		 */
-		// this.createWalletPayment = function() {
-		// 	// Check the form before proceeding.
-		// 	if (! this.paymentForm.valid()) {
-		// 		return false;
-		// 	}
-		// 	// Ok, now create the payment for the Apple/Google Pay.
-		// 	const paymentRequestJson = {
-		// 		requestShippingAddress: false,
-		// 		requestBillingInfo: true,
-		// 		shippingContact: {
-		// 			familyName: this.billLastName.val(),
-		// 			givenName: this.billFirstName.val(),
-		// 			email: this.billEmail.val(),
-		// 			country: this.billCountry.val(),
-		// 			region: this.billState.val(),
-		// 			city: this.billCity.val(),
-		// 			addressLines: [
-		// 				this.billAddress.val(),
-		// 				this.billAddress2.val()
-		// 			],
-		// 			postalCode: this.billZip.val(),
-		// 			phone: this.billPhone.val()
-		// 		},
-		// 		currencyCode: eeaSquareParameters.paymentCurrency,
-		// 		countryCode: eeaSquareParameters.orgCountry,
-		// 		total: {
-		// 			label: eeaSquareParameters.siteName,
-		// 			amount: this.payAmount,
-		// 			pending: false
-		// 		}
-		// 	};
-		//
-		// 	return paymentRequestJson;
-		// };
-
-
 		/**
 		 * @function paymentSuccess
 		 * Submits the form and adjusts all the "submit" button properties.
@@ -533,12 +499,13 @@ jQuery(document).ready(function($) {
 			$('.hide-me-after-successful-payment-js').hide();
 			// Trigger click event on SPCO "Proceed to Next Step" button.
 			this.submitPaymentButton.parents('form:first').find('.spco-next-step-btn').trigger('click');
-			// Further verification is needed ?
+
+			// Further actions needed ? Maybe got an error ?
 			this.spco.main_container.on('spco_process_response', (event, nextStep, response) => {
 				if (! response.success) {
 					this.submitPaymentButton.prop('disabled', false).removeClass('spco-disabled-submit-btn');
 					this.spco.disable_submit_buttons();
-					// tell SPCO to not enable the submit button.
+					// Do not enable the submit button.
 					this.spco.allow_enable_submit_buttons = false;
 				}
 			});
@@ -643,13 +610,16 @@ jQuery(document).ready(function($) {
 			if (! this.initialized) {
 				return;
 			}
+			// Also reset the parameters.
+			this.initialized = false;
+			this.squarePaymentForm = this.card = this.googlePay = this.applePay = {};
+			this.doSca = false;
 			// Unhook the Square submission hooks, if they were set previously.
 			this.removeHook(this.paymentForm, 'submit.eeaSquare');
 			this.removeHook(this.googlePayButton, 'click.eeaSquare');
 			this.removeHook(this.applePayButton, 'click.eeaSquare');
 			if (typeof this.squarePaymentForm === 'object') {
 				this.submitPaymentButton.hide();
-				this.initialized = false;
 				// Tear down the form.
 				this.destroyElement(this.squarePaymentForm);
 				// Destroy the card input.
@@ -657,9 +627,6 @@ jQuery(document).ready(function($) {
 				// Also disassemble the Digital Wallet.
 				this.destroyElement(this.googlePay);
 				this.destroyElement(this.applePay);
-				// Also reset the parameters.
-				this.squarePaymentForm = this.card = this.googlePay = this.applePay = {};
-				this.doSca = false;
 			}
 		};
 
