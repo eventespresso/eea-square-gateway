@@ -124,7 +124,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         $paymentsApi->setAccessToken($this->_access_token);
         $paymentsApi->setUseDwallet($this->_use_dwallet);
         $paymentsApi->setLocationId($this->_location_id);
-        $paymentsApi->setsquareToken($billing_info['eea_square_token']);
+        $paymentsApi->setPaymentToken($billing_info['eea_square_token']);
+        $paymentsApi->setVerificationToken($billing_info['eea_square_sca']);
         if ($order && is_object($order)) {
             $paymentsApi->setOrderId($order->id);
         }

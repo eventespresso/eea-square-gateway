@@ -210,7 +210,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
 
     /**
      * Gets the base URL to all the Square middleman services for Event Espresso.
-     * If LOCAL_MIDDLEMAN_SERVER is defined, requests wi be sent to connect.eventespresso.dev.
+     * If LOCAL_MIDDLEMAN_SERVER is defined, requests will be sent to connect.eventespresso.test.
      *
      * @param EE_Payment_Method $paymentMethod
      * @return string

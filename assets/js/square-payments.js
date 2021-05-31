@@ -16,22 +16,25 @@ jQuery(document).ready(function($) {
 	 *		orgCountry: string,
 	 *		currencySign: string,
 	 *		txnId: int,
-     *		noSPCOError: string
+	 *		noSPCOError: string
 	 *		noSquareError: string,
 	 *		browserNotSupported: string,
-     *		getTokenError: string,
+	 *		getTokenError: string,
 	 * }}
 	 */
 	function EeaSquarePayments() {
 		this.submitButtonId = '#eea-square-pay-button';
 		this.paymentFormId = '#eea-square-pm-form-div';
 		this.billingFormId = '#square-onsite-billing-form';
+		this.googlePayButtonId = '#eea-square-pm-google-pay';
+		this.applePayButtonId = '#apple-pay-button';
 		this.offsetFromTopModifier = -400;
 		this.paymentMethodSelector = {};
 		this.paymentMethodInfoDiv = {};
 		this.paymentFormDiv = {};
 		this.submitPaymentButton = {};
 		this.paymentNonceInput = {};
+		this.paymentVerificationInput = {};
 		this.notification = '';
 		this.initialized = false;
 		this.selected = false;
@@ -55,9 +58,20 @@ jQuery(document).ready(function($) {
 		this.billZip = {};
 		this.billPhone = {};
 		this.payAmount = 0;
+		this.card = {};
+		this.applePay = {};
+		this.googlePay = {};
+		this.paymentMethod = {};
+		this.darkModeCardStyle = {};
+		this.googlePayButton = {};
+		this.applePayButton = {};
+		this.doSca = false;
+		this.squarePayments = {};
+
 
 		/**
 		 * @function initialize
+		 * Initialize the payment method.
 		 */
 		this.initialize = function() {
 			this.initializeObjects();
@@ -68,7 +82,7 @@ jQuery(document).ready(function($) {
 				return;
 			}
 			// Ensure that the Square js class is loaded.
-			if (typeof SqPaymentForm === 'undefined' || ! eeaSquareParameters.appId) {
+			if (typeof Square === 'undefined' || ! eeaSquareParameters.appId) {
 				this.spco.offset_from_top_modifier = this.offsetFromTopModifier;
 				this.notification = this.spco.generate_message_object(
 					'',
@@ -98,17 +112,23 @@ jQuery(document).ready(function($) {
 			this.initialized = true;
 		};
 
+
 		/**
 		 * @function initializeObjects
+		 * Initializes all the required objects.
 		 */
 		this.initializeObjects = function() {
 			this.submitPaymentButton = $(this.submitButtonId);
+			this.paymentForm = this.submitPaymentButton.parents('form:first');
 			this.paymentFormDiv = $(this.paymentFormId);
 			this.paymentMethodSelector = $('#ee-available-payment-method-inputs-squareonsite-lbl');
 			this.paymentMethodInfoDiv = $('#spco-payment-method-info-squareonsite');
 			this.paymentNonceInput = $('#eea-square-nonce');
+			this.paymentVerificationInput = $('#eea-square-sca');
 			this.txnId = eeaSquareParameters.txnId;
 			this.billingForm = $(this.billingFormId);
+			this.googlePayButton = this.paymentForm.find(this.googlePayButtonId).first();
+			this.applePayButton = this.paymentForm.find(this.applePayButtonId).first();
 			// Billing data.
 			if (typeof this.billingForm !== 'undefined') {
 				this.billFirstName = this.billingForm.find(
@@ -132,155 +152,226 @@ jQuery(document).ready(function($) {
 				this.billPhone = this.billingForm.find(
 					'input[id*="billing-form-phone"]:visible');
 			}
+
+			// Card styling.
+			this.darkModeCardStyle = {
+				'.input-container.is-focus': {
+					borderColor: '#006AFF',
+				},
+				'.input-container.is-error': {
+					borderColor: '#ef2410',
+				},
+				'.message-text': {
+					color: '#999999',
+				},
+				'.message-icon': {
+					color: '#999999',
+				},
+				'.message-text.is-error': {
+					color: '#ef2410',
+				},
+				'.message-icon.is-error': {
+					color: '#ef2410',
+				},
+				input: {
+					backgroundColor: '#2D2D2D',
+					color: '#FFFFFF',
+					fontFamily: 'helvetica neue, sans-serif',
+				},
+				'input::placeholder': {
+					color: '#A5A5A5',
+				},
+				'input.is-error': {
+					color: '#ef2410',
+				},
+			};
 		};
+
+
+		/**
+		 * @function getTransactionData
+		 * Get the transaction data.
+		 */
+		this.getTransactionData = function() {
+			const squareInstance = this;
+			var reqData = {
+				step: 'payment_options',
+				action: 'get_transaction_details_for_gateways',
+				selected_method_of_payment: eeaSquareParameters.paymentMethodSlug,
+				generate_reg_form: false,
+				process_form_submission: false,
+				noheader: true,
+				ee_front_ajax: true,
+				EESID: eei18n.EESID,
+				revisit: eei18n.revisit,
+				e_reg_url_link: eei18n.e_reg_url_link
+			};
+
+			$.ajax({
+				type: "POST",
+				url: eei18n.ajax_url,
+				data: reqData,
+				dataType: "json",
+				beforeSend: function() {
+					squareInstance.spco.do_before_sending_ajax();
+				},
+				success: function(response) {
+					// If we can't get a transaction data we can't set up a checkout.
+					if (response['error'] || typeof response['TXN_ID'] == 'undefined' || response['TXN_ID'] == null) {
+						return squareInstance.spco.submit_reg_form_server_error();
+					}
+					// Save transaction data.
+					squareInstance.txnData = response;
+					// Set the payment amount.
+					squareInstance.payAmount = squareInstance.txnData.payment_amount.toFixed(eeaSquareParameters.decimalPlaces);
+					// Set the right amount on the button.
+					$(squareInstance.submitButtonId).val(
+						eeaSquareParameters.payButtonText
+						+ ' ' + eeaSquareParameters.currencySign
+						+ squareInstance.payAmount
+					);
+
+					// Now build the PM form.
+					squareInstance.buildSquarePaymentForm();
+				},
+				error: function() {
+					squareInstance.spco.end_ajax();
+					return squareInstance.spco.submit_reg_form_server_error();
+				}
+			});
+		};
+
 
 		/**
 		 * @function buildSquarePaymentForm
+		 * Sets up the payment for itself, creating the card form etc.
 		 */
-		this.buildSquarePaymentForm = function() {
+		this.buildSquarePaymentForm = async function() {
 			// Enable the loader.
 			this.spco.do_before_sending_ajax();
-			// Create and initialize a payment form object.
-			if (SqPaymentForm.isSupportedBrowser()) {
-				let squareInstance = this;
-				/**
-				 * Single-element payment form.
- 				 */
-				this.squarePaymentForm = new SqPaymentForm({
-					// Initialize the payment form elements.
-					applicationId: eeaSquareParameters.appId,
-					autoBuild: false,
-					// Initialize the credit card placeholders
-					card: {
-						elementId: 'sq-card-se',
-						inputStyle: {
-							// Set font attributes on card entry fields.
-							fontSize: '16px',
-							fontWeight: 500,
-							placeholderFontWeight: 300,
-							autoFillColor: '#FFFFFF',    // Sets color of card nbr & exp. date.
-							color: '#FFFFFF',            // Sets color of CVV & Zip.
-							placeholderColor: '#ccc',    // Sets placeholder text color.
-							backgroundColor: '#121212',
-							cardIconColor: '#ccc',
-							borderRadius: '10px',
-							boxShadow: "0px 2px 6px rgba(0,0,0,.02)," +
-								"0px 4px 8px rgba(0,0,0, 0.04), 0px 8px 30px " +
-								"rgba(0,0,0, 0.04), 0px 1px 2px rgba(0,0,0, 0.08)",
-							// Set form appearance in error state.
-							error: {
-								cardIconColor: '#f504b1', // Sets color of card icon.
-								color: '#f81eba',         // Sets color of card entry text.
-								backgroundColor: '#121212',  // Card entry background color.
-								fontWeight: 500,
-							},
-							// Set appearance of hint text below form.
-							details: {
-								hidden: false,    // Shows or hides hint text.
-								color: '#A5A5A5', // Sets hint text color.
-								fontSize: '12px',
-								fontWeight: 500,
-								// Sets attributes of hint text in when form.
-								error: {
-									color: '#f81eba',
-									fontSize: '12px'
-								}
-							}
-						}
-					},
-					callbacks: {
-						// Triggered when: squarePaymentForm completes a card nonce request.
-						cardNonceResponseReceived: squareInstance.handleSquareResponse.bind(squareInstance),
-						// Invoked when the payment form is hosted in an unsupported browser.
-						unsupportedBrowserDetected: squareInstance.unsupportedBrowser.bind(squareInstance),
-					}
-				});
-				// Build the single-element form.
-				this.squarePaymentForm.build((error, result) => {
-					if (error) {
-						this.paymentError(error);
-					}
-				});
 
-
-				/**
-				 * The Digital Wallet buttons.
-				 * Do check if this option is enabled.
- 				 */
- 				if (eeaSquareParameters.useDigitalWallet === '1') {
-					this.squareDigitalWallet = new SqPaymentForm({
-						applicationId: eeaSquareParameters.appId,
-						locationId: eeaSquareParameters.locationId,
-						inputClass: 'sq-input',
-						autoBuild: false,
-						// Initialize Google Pay button ID.
-						googlePay: {
-							elementId: 'eea-square-pm-google-pay'
-						},
-						// Initialize Apple Pay placeholder ID.
-						applePay: {
-							elementId: 'eea-square-pm-apple-pay'
-						},
-						// Call back functions.
-						callbacks: {
-							// Customize the createPaymentRequest callback function.
-							createPaymentRequest: squareInstance.createWalletPayment.bind(squareInstance),
-							// Enable the buttons if supported.
-							methodsSupported: squareInstance.enableDigitalWallet.bind(squareInstance),
-							// Triggered when: squarePaymentForm completes a card
-							// nonce request through Google Pay or Apple Pay.
-							cardNonceResponseReceived: squareInstance.handleSquareResponse.bind(squareInstance),
-						}
-					});
-					// Build the Digital Wallet form.
-					this.squareDigitalWallet.build((error, result) => {
-						if (error) {
-							this.paymentError(error);
-						}
-					});
-				}
-
-				// Set the right amount on the button.
-				$(this.submitButtonId).val(
-					eeaSquareParameters.payButtonText
-					+ ' ' + eeaSquareParameters.currencySign
-					+ this.payAmount
-				);
-
-				// Show the Pay button if the payment form generated ok.
-				this.submitPaymentButton.show();
-				this.spco.end_ajax();
-			} else {
-				this.hideSquare();
-				this.displayError(eeaSquareParameters.browserNotSupported);
+			// Square "Web Payments" payment method input.
+			this.squarePayments = Square.payments(
+				eeaSquareParameters.appId,
+				eeaSquareParameters.locationId
+			);
+			// The default payment method.
+			try {
+				// Initialize the payment method form.
+				// The card.
+				this.card = await this.initializeCard(this.squarePayments);
+				// Card as the default payment method.
+				this.paymentMethod = this.card;
+			} catch (error) {
+				// Got an error. Display and continue.
+				this.paymentError(error);
 			}
+
+			// Digital Wallet.
+			if (eeaSquareParameters.useDigitalWallet === '1') {
+				// Using separate 'try' blocks to give both methods a chance to load.
+				try {
+					// Apple Pay.
+					this.applePay = await this.initializeApplePay(this.squarePayments);
+					this.applePayButton.style.display = 'inline-block';
+				} catch (error) {
+					this.paymentError(error);
+				}
+				try {
+					// Google Pay.
+					this.googlePay = await this.initializeGooglePay(this.squarePayments);
+				} catch (error) {
+					this.paymentError(error);
+				}
+			}
+
+			// Show the Pay button if the payment form generated ok.
+			this.submitPaymentButton.show();
+			this.spco.end_ajax();
 		};
+
 
 		/**
-		 * @function enableDigitalWallet
+		 * @function initializeCard
+		 * Initializes a Card object for Square payments.
 		 */
-		this.enableDigitalWallet = function(methods, unsupportedReason) {
-			const googlePayBtn = document.getElementById('eea-square-pm-google-pay');
-			const applePayBtn = document.getElementById('eea-square-pm-apple-pay');
-
-			// Only show the button if Google Pay on the Web is enabled.
-			if (methods.googlePay === true) {
-				googlePayBtn.style.display = 'inline-block';
-			}
-			// else if(unsupportedReason) {
-			// 	console.log('Google Pay not supported:', unsupportedReason);
-			// }
-			// Same for ApplePay.
-			if (methods.applePay === true) {
-				applePayBtn.style.display = 'inline-block';
-			}
-			// else if(unsupportedReason) {
-			// 	console.log('Apple Pay not supported:', unsupportedReason);
-			// }
+		this.initializeCard = async function (payments) {
+			const card = await payments.card({
+				style: this.darkModeCardStyle,
+			});
+			await card.attach('#sq-card-se');
+			return card;
 		};
+
+
+		/**
+		 * @function initializeGooglePay
+		 * Initializes the Apple Pay object for Square payments.
+		 * @param  {object} payments
+		 */
+		this.initializeGooglePay = async function (payments) {
+			const paymentRequest = this.buildPaymentRequest(payments);
+			const googlePay = await payments.googlePay(paymentRequest);
+			await googlePay.attach(this.googlePayButtonId);
+			return googlePay;
+		};
+
+
+		/**
+		 * @function initializeApplePay
+		 * Initializes the Apple Pay object for Square payments.
+		 * @param  {object} payments
+		 */
+		this.initializeApplePay = async function (payments) {
+			const paymentRequest = this.buildPaymentRequest(payments);
+			const applePay = await payments.applePay(paymentRequest);
+			return applePay;
+		};
+
+
+		/**
+		 * @function tokenizePayment
+		 * Creates a token for the payment and submits to the server.
+		 * @param  {object} paymentMethod
+		 */
+		this.tokenizePayment = async function(paymentMethod) {
+			const tokenResult = await paymentMethod.tokenize();
+			let verificationToken;
+			if (tokenResult.status === 'OK') {
+				// If this is a card payment, do a SCA.
+				if (this.doSca) {
+					verificationToken = await this.verifyBuyer(this.squarePayments, tokenResult.token);
+				}
+				this.paymentSuccess(tokenResult.token, tokenResult, verificationToken);
+			} else {
+				this.paymentError(tokenResult.status);
+			}
+		};
+
+
+		/**
+		 * @function buildPaymentRequest
+		 * Creates a token for the payment and submits to the server.
+		 * @param  {object} payments
+		 */
+		this.buildPaymentRequest = function(payments) {
+			return payments.paymentRequest({
+				countryCode: eeaSquareParameters.orgCountry,
+				currencyCode: eeaSquareParameters.paymentCurrency,
+				requestShippingContact: false,
+				requestBillingContact: false,
+				total: {
+					amount: this.payAmount,
+					label: eeaSquareParameters.siteName,
+					pending: false,
+				},
+			});
+		};
+
 
 		/**
 		 * @function setListenerForPaymentAmountChange
+		 * Adds a listener for the payment amount change.
 		 */
 		this.setListenerForPaymentAmountChange = function() {
 			this.spco.main_container.on('spco_payment_amount', (event, paymentAmount) => {
@@ -297,139 +388,139 @@ jQuery(document).ready(function($) {
 			} );
 		};
 
+
 		/**
 		 * @function setListenerForSubmitPaymentButton
+		 * Adds a listener for the payment buttons/options.
 		 */
 		this.setListenerForSubmitPaymentButton = function() {
-			this.paymentForm = this.submitPaymentButton.parents('form:first');
-			this.paymentForm.on('submit.eeaSquare', (e) => {
-				e.preventDefault();
-				// First validate the form, so that the payment flow is not broken by SPCO form validation.
-				if (this.paymentForm.valid()) {
-					this.submitPaymentButton.prop('disabled', true).addClass('spco-disabled-submit-btn');
-					// Request a nonce from the squarePaymentForm object
-					this.squarePaymentForm.requestCardNonce();
-				}
-			});
-		};
-
-		/**
-		 * Get the transaction data.
-		 */
-		this.getTransactionData = function() {
-			var reqData = {
-				step: 'payment_options',
-				action: 'get_transaction_details_for_gateways',
-				selected_method_of_payment: eeaSquareParameters.paymentMethodSlug,
-				generate_reg_form: false,
-				process_form_submission: false,
-				noheader: true,
-				ee_front_ajax: true,
-				EESID: eei18n.EESID,
-				revisit: eei18n.revisit,
-				e_reg_url_link: eei18n.e_reg_url_link
-			};
 			const squareInstance = this;
-
-			$.ajax({
-				type: "POST",
-				url: eei18n.ajax_url,
-				data: reqData,
-				dataType: "json",
-				beforeSend: function() {
-					SPCO.do_before_sending_ajax();
-				},
-				success: function(response) {
-					// If we can't get a transaction data we can't set up a checkout.
-					if (response['error'] || typeof response['TXN_ID'] == 'undefined' || response['TXN_ID'] == null) {
-						return SPCO.submit_reg_form_server_error();
-					}
-					// Save transaction data.
-					squareInstance.txnData = response;
-					// Set the payment amount.
-					squareInstance.payAmount = squareInstance.txnData.payment_amount.toFixed(eeaSquareParameters.decimalPlaces);
-
-					// Now build the PM form.
-					squareInstance.buildSquarePaymentForm();
-				},
-				error: function() {
-					SPCO.end_ajax();
-					return SPCO.submit_reg_form_server_error();
-				}
+			// Card payment event.
+			this.paymentForm.on('submit.eeaSquare', (event) => {
+				event.preventDefault();
+				this.paymentMethod = this.card;
+				this.doSca = true;
+				squareInstance.processPayment(event);
+			});
+			// Google Pay button event.
+			this.googlePayButton.on('click.eeaSquare', (event) => {
+				event.preventDefault();
+				this.paymentMethod = this.googlePay;
+				squareInstance.processPayment(event);
+			});
+			// Apple Pay button event.
+			this.applePayButton.on('click.eeaSquare', (event) => {
+				event.preventDefault();
+				this.paymentMethod = this.applePay;
+				squareInstance.processPayment(event);
 			});
 		};
 
+
 		/**
-		 * @function handleSquareResponse
-		 * @param  {object} errors
-		 * @param  {string} nonce
-		 * @param  {object} cardData
+		 * @function processPayment
+		 * Payment method on click callback.
+		 * @param {object} event
 		 */
-		this.handleSquareResponse = function(errors, nonce, cardData) {
-			if (errors) {
-				this.paymentError(errors);
-			} else {
-				this.paymentSuccess(nonce, cardData);
+		this.processPayment = function(event) {
+			// First validate the form, so that the payment flow is not broken by SPCO form validation.
+			if (this.paymentForm.valid()) {
+				this.submitPaymentButton.prop('disabled', true).addClass('spco-disabled-submit-btn');
+				// Tokenize the payment method.
+				this.tokenizePayment(this.paymentMethod);
 			}
 		};
+
+
+		/**
+		 * @function verifyBuyer
+		 * Strong customer authentication.
+		 * @param {object} payments
+		 * @param {string} token
+		 */
+		this.verifyBuyer = async function(payments, token) {
+			const verificationDetails = {
+				amount: this.payAmount,
+				currencyCode: eeaSquareParameters.paymentCurrency,
+				intent: 'CHARGE',
+				// Buyer billing details.
+				billingContact: {
+					addressLines: [
+						this.billAddress.val(),
+						this.billAddress2.val()
+					],
+					familyName: this.billLastName.val(),
+					givenName: this.billFirstName.val(),
+					email: this.billEmail.val(),
+					country: this.billCountry.val(),
+					phone: this.billPhone.val(),
+					region: this.billState.val(),
+					city: this.billCity.val(),
+				},
+			};
+
+			const verificationResults = await payments.verifyBuyer(
+				token,
+				verificationDetails
+			);
+			return verificationResults.token;
+		}
+
+
 
 		/**
 		 * @function createWalletPayment
 		 * @return object
 		 */
-		this.createWalletPayment = function() {
-			// Check the form before proceeding.
-			if (! this.paymentForm.valid()) {
-				return false;
-			}
-			// Ok, now create the payment for the Apple/Google Pay.
-			const paymentRequestJson = {
-				requestShippingAddress: false,
-				requestBillingInfo: true,
-				shippingContact: {
-					familyName: this.billLastName.val(),
-					givenName: this.billFirstName.val(),
-					email: this.billEmail.val(),
-					country: this.billCountry.val(),
-					region: this.billState.val(),
-					city: this.billCity.val(),
-					addressLines: [
-						this.billAddress.val(),
-						this.billAddress2.val()
-					],
-					postalCode: this.billZip.val(),
-					phone: this.billPhone.val()
-				},
-				currencyCode: eeaSquareParameters.paymentCurrency,
-				countryCode: eeaSquareParameters.orgCountry,
-				total: {
-					label: eeaSquareParameters.siteName,
-					amount: this.payAmount,
-					pending: false
-				}
-			};
+		// this.createWalletPayment = function() {
+		// 	// Check the form before proceeding.
+		// 	if (! this.paymentForm.valid()) {
+		// 		return false;
+		// 	}
+		// 	// Ok, now create the payment for the Apple/Google Pay.
+		// 	const paymentRequestJson = {
+		// 		requestShippingAddress: false,
+		// 		requestBillingInfo: true,
+		// 		shippingContact: {
+		// 			familyName: this.billLastName.val(),
+		// 			givenName: this.billFirstName.val(),
+		// 			email: this.billEmail.val(),
+		// 			country: this.billCountry.val(),
+		// 			region: this.billState.val(),
+		// 			city: this.billCity.val(),
+		// 			addressLines: [
+		// 				this.billAddress.val(),
+		// 				this.billAddress2.val()
+		// 			],
+		// 			postalCode: this.billZip.val(),
+		// 			phone: this.billPhone.val()
+		// 		},
+		// 		currencyCode: eeaSquareParameters.paymentCurrency,
+		// 		countryCode: eeaSquareParameters.orgCountry,
+		// 		total: {
+		// 			label: eeaSquareParameters.siteName,
+		// 			amount: this.payAmount,
+		// 			pending: false
+		// 		}
+		// 	};
+		//
+		// 	return paymentRequestJson;
+		// };
 
-			return paymentRequestJson;
-		};
-
-		/**
-		 * @function unsupportedBrowser
-		 */
-		this.unsupportedBrowser = function() {
-			this.hideSquare();
-			this.displayError(eeaSquareParameters.browserNotSupported);
-		};
 
 		/**
 		 * @function paymentSuccess
-		 * @param  {object} nonce
+		 * Submits the form and adjusts all the "submit" button properties.
+		 * @param  {string} nonce
 		 * @param  {object} cardData
+		 * @param  {string} verificationToken
 		 */
-		this.paymentSuccess = function(nonce, cardData) {
+		this.paymentSuccess = function(nonce, cardData, verificationToken) {
 			// Enable SPCO submit buttons.
 			this.spco.enable_submit_buttons();
 			// Save the payment nonce.
 			this.paymentNonceInput.val(nonce);
+			this.paymentVerificationInput.val(verificationToken);
 			this.spco.offset_from_top_modifier = this.offsetFromTopModifier;
 			// Hide any return to cart buttons, etc.
 			$('.hide-me-after-successful-payment-js').hide();
@@ -446,18 +537,24 @@ jQuery(document).ready(function($) {
 			});
 		};
 
+
 		/**
-		 * @function checkout_error
-		 * @param  {object} response
+		 * @function paymentError
+		 * This re-enables the Pay button, displays and logs the error.
+		 * @param  errors
 		 */
 		this.paymentError = function(errors) {
 			let errorsMessage = '';
 			// Re-enable the payment button.
 			this.submitPaymentButton.prop('disabled', false).removeClass('spco-disabled-submit-btn');
 			// Show error in payment form.
-			errors.forEach(function (error) {
-				errorsMessage += ' ' + error.message;
-			});
+			if ($.isArray(errors)) {
+				errors.forEach(function (error) {
+					errorsMessage += ' ' + error.message;
+				});
+			} else {
+				errorsMessage = errors.toString();
+			}
 			this.notification = this.spco.generate_message_object(
 				'',
 				'',
@@ -466,17 +563,20 @@ jQuery(document).ready(function($) {
 			this.logError(errorsMessage);
 		};
 
+
 		/**
 		 * @function hideSquare
+		 * Simply hides Square PM selector.
 		 */
 		this.hideSquare = function() {
 			this.paymentMethodSelector.hide();
 			this.paymentMethodInfoDiv.hide();
 		};
 
+
 		/**
-		 * Deactivate SPCO submit buttons to prevent submitting with no Square token.
 		 * @function disableSPCOSubmitButtonsIfSquareSelected
+		 * Deactivate SPCO submit buttons to prevent submitting with no Square token.
 		 */
 		this.disableSPCOSubmitButtonsIfSquareSelected = function() {
 			if (this.selected && this.submitPaymentButton.length > 0) {
@@ -484,31 +584,36 @@ jQuery(document).ready(function($) {
 			}
 		};
 
+
 		/**
 		 * @function displayError
+		 * This displays and logs the error message.
 		 * @param  {string} msg
 		 */
 		this.displayError = function(msg) {
 			// center notices on screen
 			$('#espresso-ajax-notices').eeCenter('fixed');
 			// target parent container
-			const espressoJjaxMsg = $('#espresso-ajax-notices-error');
+			const espressoAjaxMsg = $('#espresso-ajax-notices-error');
 			//  actual message container
-			espressoJjaxMsg.children('.espresso-notices-msg').html(msg);
+			espressoAjaxMsg.children('.espresso-notices-msg').html(msg);
 			// bye bye spinner
 			$('#espresso-ajax-loading').fadeOut('fast');
 			// display message
-			espressoJjaxMsg.removeClass('hidden').show().delay(10000).fadeOut();
+			espressoAjaxMsg.removeClass('hidden').show().delay(10000).fadeOut();
 			// Log the Error.
 			this.logError(msg);
 		};
 
+
 		/**
 		 * @function logError
+		 * Logs the error in the EE payment method system (Payment Methods >> Logs).
 		 * @param  {string} msg
 		 */
 		this.logError = function(msg) {
 			const ajaxUrl = typeof ajaxurl === 'undefined' ? eei18n.ajax_url : ajaxurl;
+			console.error(msg);
 			$.ajax({
 				type: 'POST',
 				dataType: 'json',
@@ -521,8 +626,10 @@ jQuery(document).ready(function($) {
 			});
 		};
 
+
 		/**
 		 * @function tearDown
+		 * This tears down the current payment methods objects/forms.
 		 */
 		this.tearDown = function() {
 			// Head out if this PM is not initialized anymore.
@@ -530,17 +637,50 @@ jQuery(document).ready(function($) {
 				return;
 			}
 			// Unhook the Square submission hooks, if they were set previously.
-			if (typeof this.paymentForm.off === 'function') {
-				this.paymentForm.off('submit.eeaSquare');
-			}
+			this.removeHook(this.paymentForm, 'submit.eeaSquare');
+			this.removeHook(this.googlePayButton, 'click.eeaSquare');
+			this.removeHook(this.applePayButton, 'click.eeaSquare');
 			if (typeof this.squarePaymentForm === 'object') {
 				this.submitPaymentButton.hide();
 				this.initialized = false;
-				if (typeof this.squarePaymentForm.destroy === 'function') {
-					this.squarePaymentForm.destroy();
-				}
+				// Tear down the form.
+				this.destroyElement(this.squarePaymentForm);
+				// Destroy the card input.
+				this.destroyElement(this.card);
+				// Also disassemble the Digital Wallet.
+				this.destroyElement(this.googlePay);
+				this.destroyElement(this.applePay);
+				// Also reset the parameters.
+				this.squarePaymentForm = this.card = this.googlePay = this.applePay = {};
+				this.doSca = false;
 			}
 		};
+
+
+		/**
+		 * @function destroyElement
+		 * Destroys the provided object, if a destroy() method exists.
+		 * @param  {object} element
+		 */
+		this.destroyElement = function(element) {
+			if (typeof element.destroy === 'function') {
+				element.destroy();
+			}
+		}
+
+
+		/**
+		 * @function removeHook
+		 * Removes the hook from the provided element.
+		 * @param  {object} element
+		 * @param  {string} hookName
+		 */
+		this.removeHook = function(element, hookName) {
+			if (typeof element.off === 'function') {
+				element.off(hookName);
+			}
+		}
+
 
 		// Initialize Square Payments if the SPCO reg step changes to "payment_options".
 		this.spco.main_container.on('spco_display_step', (event, stepToShow) => {

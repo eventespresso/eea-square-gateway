@@ -111,7 +111,12 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
                     'square_pm_form'   => $this->squareEmbeddedForm(),
                     'eea_square_token' => new EE_Hidden_Input([
                         'html_id'   => 'eea-square-nonce',
-                        'html_name' => 'EEA_squareToken',
+                        'html_name' => 'EEA_paymentToken',
+                        'default'   => ''
+                    ]),
+                    'eea_square_sca'   => new EE_Hidden_Input([
+                        'html_id'   => 'eea-square-sca',
+                        'html_name' => 'EEA_squareVerification',
                         'default'   => ''
                     ]),
                 ]
@@ -171,9 +176,9 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
     public function enqueue_js()
     {
         // Scripts.
-        $scriptsUrl = 'https://js.squareup.com/v2/paymentform';
+        $scriptsUrl = 'https://web.squarecdn.com/v1/square.js';
         if ($this->squareOnsitePmt->debug_mode()) {
-            $scriptsUrl = 'https://js.squareupsandbox.com/v2/paymentform';
+            $scriptsUrl = 'https://sandbox.web.squarecdn.com/v1/square.js';
         }
         wp_enqueue_script('eea_square_js_lib', $scriptsUrl, ['single_page_checkout'], false, true);
         wp_enqueue_script(

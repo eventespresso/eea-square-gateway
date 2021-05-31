@@ -22,7 +22,13 @@ class EESquarePayment extends EESquareApiBase
      * Square payment token.
      * @var string
      */
-    protected $squareToken = '';
+    protected $paymentToken = '';
+
+    /**
+     * Square verification token.
+     * @var string
+     */
+    protected $verificationToken = '';
 
     /**
      * Square order ID.
@@ -90,7 +96,7 @@ class EESquarePayment extends EESquareApiBase
 
         // Form a payment.
         $paymentBody = [
-            'source_id'       => $this->squareToken,
+            'source_id'       => $this->paymentToken,
             'idempotency_key' => $this->getIdempotencyKey(),
             'amount_money' => [
                 'amount'   => $this->gateway->convertToSubunits($this->payment->amount()),
@@ -99,6 +105,11 @@ class EESquarePayment extends EESquareApiBase
             'location_id'     => $this->locationId,
             'reference_id'    => $referenceId,
         ];
+
+        // Is there a verifications token (SCA) ?
+        if ($this->verificationToken) {
+            $paymentBody['verification_token'] = $this->verificationToken;
+        }
 
         $paymentBody['note'] = sprintf(
             // translators: %1$s: site name, %2$s: transaction ID.
@@ -134,21 +145,44 @@ class EESquarePayment extends EESquareApiBase
      *
      * @return string
      */
-    public function squareToken()
+    public function paymentToken()
     {
-        return $this->squareToken;
+        return $this->paymentToken;
     }
 
 
     /**
      * Set Square payment Token.
      *
-     * @param string $squareToken
+     * @param string $paymentToken
      * @return void
      */
-    public function setsquareToken($squareToken)
+    public function setPaymentToken($paymentToken)
     {
-        $this->squareToken = $squareToken;
+        $this->paymentToken = $paymentToken;
+    }
+
+
+    /**
+     * Get Square verification Token.
+     *
+     * @return string
+     */
+    public function verificationToken()
+    {
+        return $this->verificationToken;
+    }
+
+
+    /**
+     * Set Square verification Token.
+     *
+     * @param string $verificationToken
+     * @return void
+     */
+    public function setVerificationToken($verificationToken)
+    {
+        $this->verificationToken = $verificationToken;
     }
 
 

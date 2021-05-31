@@ -10,10 +10,10 @@
  */
 ?>
 <div id="eea-square-pm-form-div">
-    <!-- GooglePay button -->
-    <button id="eea-square-pm-google-pay" class="button-google-pay sq-input"></button>
-    <!-- ApplePay button -->
-    <button id="eea-square-pm-apple-pay" class="apple-pay-button apple-pay-button-black sq-input"></button>
+    <!-- Apple Pay button -->
+    <div id="apple-pay-button" class="apple-pay-button"></div>
+    <!-- Google Pay button -->
+    <div id="eea-square-pm-google-pay" class="google-pay-button"></div>
 
     <div id="sq-card-se"></div>
     <input type="submit" id="eea-square-pay-button" class="button-credit-card" value="<?php esc_html_e('Pay', 'event_espresso');?>" style="display: none;">
