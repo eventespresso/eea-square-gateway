@@ -234,29 +234,22 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
             'decimalPlaces'     => $decimalPlaces,
             'siteName'          => get_bloginfo('name'),
             'noSPCOError'         => esc_html__(
-                // @codingStandardsIgnoreStart
                 'It appears the Single Page Checkout javascript was not loaded properly! Please refresh the page and try again or contact support.',
                 'event_espresso'
-                // @codingStandardsIgnoreEnd
             ),
             'noSquareError'       => esc_html__(
-                // @codingStandardsIgnoreStart
                 'It appears that Square checkout JavaScript was not loaded properly! Please refresh the page and try again or contact support. Square payments will not be processed.',
                 'event_espresso'
-                // @codingStandardsIgnoreEnd
             ),
             'browserNotSupported' => esc_html__(
-                // @codingStandardsIgnoreStart
                 'It appears that this browser is not supported by Square. We apologize, but Square payment method won\'t work in this browser version.',
                 'event_espresso'
-                // @codingStandardsIgnoreEnd
             ),
             'getTokenError'       => esc_html__(
-                // @codingStandardsIgnoreStart
                 'There was an error while trying to get the payment token. Please refresh the page and try again or contact support.',
                 'event_espresso'
-                // @codingStandardsIgnoreEnd
             ),
+            'formValidationNotice' => esc_html__('Billing form information not valid.', 'event_espresso'),
         ];
         return $squareParameters;
     }

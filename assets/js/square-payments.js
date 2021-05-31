@@ -20,6 +20,7 @@ jQuery(document).ready(function($) {
 	 *		noSquareError: string,
 	 *		browserNotSupported: string,
 	 *		getTokenError: string,
+	 *		formValidationNotice: string,
 	 * }}
 	 */
 	function EeaSquarePayments() {
@@ -426,8 +427,14 @@ jQuery(document).ready(function($) {
 			// First validate the form, so that the payment flow is not broken by SPCO form validation.
 			if (this.paymentForm.valid()) {
 				this.submitPaymentButton.prop('disabled', true).addClass('spco-disabled-submit-btn');
+				// In case this was disabled.
+				this.spco.allow_enable_submit_buttons = true;
 				// Tokenize the payment method.
 				this.tokenizePayment(this.paymentMethod);
+			} else {
+				this.spco.allow_enable_submit_buttons = false;
+				let notification = this.spco.generate_message_object('', '', eeaSquareParameters.formValidationNotice);
+				this.spco.scroll_to_top_and_display_messages(this.paymentMethodInfoDiv, notification, true);
 			}
 		};
 
