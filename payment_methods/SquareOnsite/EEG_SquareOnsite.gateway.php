@@ -64,17 +64,25 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         if ($isValidPayment->details() === 'error' && $isValidPayment->status() === $failedStatus) {
             return $isValidPayment;
         }
+        $transaction = $payment->transaction();
 
-        // Create an Order for this transaction.
-        $order = $this->createAnOrder($payment);
-        if (is_array($order) && isset($order['error'])) {
-            $errorMessage = (string) $order['error']['message'];
-            $orderError = esc_html__('No order created !', 'event_espresso');
-            return $this->setPaymentStatus($payment, $failedStatus, $orderError, $errorMessage);
+        // Do we already have an order ID ?
+        $orderId = $transaction->get_extra_meta('order_id', true, false);
+        if (! $orderId) {
+            // Create an Order for this transaction.
+            $order = $this->createAnOrder($payment);
+            if (is_array($order) && isset($order['error'])) {
+                $errorMessage = (string) $order['error']['message'];
+                $orderError = esc_html__('No order created !', 'event_espresso');
+                return $this->setPaymentStatus($payment, $failedStatus, $orderError, $errorMessage);
+            }
+            $orderId = $order->id;
+            // Associate the Order with this transaction.
+            $transaction->add_extra_meta('order_id', $orderId);
         }
 
         // Now create the Payment.
-        $processedPayment = $this->createAndProcessPayment($payment, $billing_info, $order);
+        $processedPayment = $this->createAndProcessPayment($payment, $billing_info, $orderId);
         if ($processedPayment instanceof EE_Payment) {
             return $processedPayment;
         }
@@ -113,10 +121,10 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      *
      * @param EEI_Payment  $payment
      * @param array        $billing_info
-     * @param Object       $order
+     * @param string       $orderId
      * @return Object
      */
-    public function createPaymentObject($payment, $billing_info, $order)
+    public function createPaymentObject($payment, $billing_info, $orderId)
     {
         $paymentsApi = new EESquarePayment($payment, $this, $this->_debug_mode);
         $paymentsApi->setApplicationId($this->_application_id);
@@ -125,8 +133,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         $paymentsApi->setLocationId($this->_location_id);
         $paymentsApi->setPaymentToken($billing_info['eea_square_token']);
         $paymentsApi->setVerificationToken($billing_info['eea_square_sca']);
-        if ($order && is_object($order)) {
-            $paymentsApi->setOrderId($order->id);
+        if ($orderId) {
+            $paymentsApi->setOrderId($orderId);
         }
         return $paymentsApi;
     }
@@ -137,16 +145,16 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      *
      * @param EEI_Payment  $payment
      * @param array        $billing_info
-     * @param Object       $order
+     * @param string       $orderId
      * @return EE_Payment
      */
-    public function createAndProcessPayment($payment, $billing_info, $order = null)
+    public function createAndProcessPayment($payment, $billing_info, $orderId = '')
     {
         $approvedStatus = $this->_pay_model->approved_status();
         $declinedStatus = $this->_pay_model->declined_status();
 
         // Payment object.
-        $squarePayment = $this->createPaymentObject($payment, $billing_info, $order);
+        $squarePayment = $this->createPaymentObject($payment, $billing_info, $orderId);
         $responsePayment = $squarePayment->create();
 
         // If it's a string - it's an error. So pass that message further.

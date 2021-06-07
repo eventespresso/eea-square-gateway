@@ -15,7 +15,7 @@ use EventEspresso\core\exceptions\InvalidInterfaceException;
 class EED_SquareOnsiteOAuth extends EED_Module
 {
     /**
-     * @return EED_Module|EED_SquareOnsiteOAuth
+     * @return EED_Module
      */
     public static function instance()
     {
@@ -105,7 +105,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 $_GET[ Domain::META_KEY_MERCHANT_ID ],
                 $_GET[ Domain::META_KEY_REFRESH_TOKEN ],
                 $_GET[ Domain::META_KEY_APPLICATION_ID ],
-                $_GET[ Domain::META_KEY_LIVE_MODE ],
+                $_GET[ Domain::META_KEY_LIVE_MODE ]
             )
         ) {
             // Missing parameters for some reason. Can't proceed.
@@ -457,7 +457,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
                     $responseBody->application_id,
                     $responseBody->access_token,
                     $responseBody->refresh_token,
-                    $responseBody->merchant_id,
+                    $responseBody->merchant_id
                 )
             ) {
                 // This is an error.
