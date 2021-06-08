@@ -271,19 +271,62 @@ class EESquareOrder extends EESquareApiBase
         // Create Order request.
         $createOrderResponse = $this->sendRequest($orderBody, $postUrl);
 
+        // Validate and return the order or request error.
+        return $this->validateResponse($createOrderResponse);
+    }
+
+
+    /**
+     * Cancel the Square Order.
+     *
+     * @param string $orderId
+     * @param string $orderVersion
+     * @return Object|array
+     */
+    public function cancel(string $orderId, string $orderVersion)
+    {
+        // Build the post URL.
+        $postUrl = $this->apiEndpoint . 'orders/' . $orderId;
+        $idempotencyKey = $this->getIdempotencyKey();
+        // Form the body.
+        $orderBody = [
+            'idempotency_key' => $idempotencyKey,
+            'order'           => [
+                'location_id' => $this->locationId,
+                'version'     => (int) $orderVersion + 1,
+                'state'       => 'CANCELED',
+            ],
+        ];
+
+        // Send cancel Order request.
+        $cancelOrderResponse = $this->sendRequest($orderBody, $postUrl, 'PUT');
+
+        // Validate and return the order or request error.
+        return $this->validateResponse($cancelOrderResponse);
+    }
+
+
+    /**
+     * Validate the response and return it if it looks ok.
+     *
+     * @param mixed $response
+     * @return Object|array
+     */
+    public function validateResponse($response)
+    {
         // If it's an array - it's an error. So pass that further.
-        if (is_array($createOrderResponse) && isset($createOrderResponse['error'])) {
-            return $createOrderResponse;
+        if (is_array($response) && isset($response['error'])) {
+            return $response;
         }
-        if (! isset($createOrderResponse->order)) {
+        if (! isset($response->order)) {
             $request_error['error']['message'] = esc_html__(
                 'Unexpected error. No order returned in Order create response.',
                 'event_espresso'
             );
             return $request_error;
         }
-        // Order created ok, return it.
-        return $createOrderResponse->order;
+        // Seems ok. Return it.
+        return $response->order;
     }
 
 

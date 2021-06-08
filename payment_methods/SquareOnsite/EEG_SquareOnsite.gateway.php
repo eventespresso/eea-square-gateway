@@ -79,6 +79,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
             $orderId = $order->id;
             // Associate the Order with this transaction.
             $transaction->add_extra_meta('order_id', $orderId);
+            $transaction->add_extra_meta('order_version', $order->version);
         }
 
         // Now create the Payment.

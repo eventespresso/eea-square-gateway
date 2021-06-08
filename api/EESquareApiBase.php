@@ -113,7 +113,7 @@ abstract class EESquareApiBase
             ],
         ];
         // Add body if this is a POST request.
-        if ($method === 'POST') {
+        if ($method === 'POST' || $method === 'PUT') {
             $postParameters['body'] = json_encode($bodyParameters);
         }
         // Sent the request.
