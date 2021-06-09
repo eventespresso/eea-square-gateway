@@ -383,14 +383,14 @@ jQuery(document).ready(function($) {
 		this.setListenerForPaymentAmountChange = function() {
 			this.spco.main_container.on('spco_payment_amount', (event, paymentAmount) => {
 				if (typeof paymentAmount !== 'undefined' && parseInt(paymentAmount) !== 0) {
+					// Update the variable holding the amount.
+					this.payAmount = paymentAmount.toFixed(eeaSquareParameters.decimalPlaces);
 					// Update the Pay button with an amount.
 					this.submitPaymentButton.val(
 						eeaSquareParameters.payButtonText
 						+ ' ' + eeaSquareParameters.currencySign
-						+ paymentAmount.toFixed(eeaSquareParameters.decimalPlaces)
+						+ this.payAmount
 					);
-					// Also update the variable holding the amount.
-					this.payAmount = paymentAmount;
 				}
 			} );
 		};
