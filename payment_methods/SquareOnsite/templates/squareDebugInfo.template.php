@@ -44,20 +44,37 @@
             </thead>
             <tbody>
                 <tr>
-                    <td><?php esc_html_e('Card CVV incorrect', 'event_espresso'); ?></td>
-                    <td>CVV: 911</td>
+                    <td><?php esc_html_e('CVV incorrect', 'event_espresso'); ?></td>
+                    <td>911</td>
                 </tr>
                 <tr>
-                    <td><?php esc_html_e('Card postal code incorrect', 'event_espresso'); ?></td>
-                    <td>Postal code: 99999</td>
+                    <td><?php esc_html_e('Postal code incorrect', 'event_espresso'); ?></td>
+                    <td>99999</td>
                 </tr>
                 <tr>
                     <td><?php esc_html_e('Card declined number', 'event_espresso'); ?></td>
-                    <td>Card number: 4000000000000002</td>
+                    <td>4000000000000002</td>
                 </tr>
                 <tr>
                     <td><?php esc_html_e('Card on file auth declined', 'event_espresso'); ?></td>
-                    <td>PAN: 4000000000000010</td>
+                    <td>4000000000000010</td>
+                </tr>
+                <tr>
+                    <td>
+                        <p>
+                            <?php esc_html_e('SCA.', 'event_espresso'); ?>
+                        </p>
+                        <p>
+                            <?php esc_html_e('Modal with verification questions.', 'event_espresso'); ?>
+                        </p>
+                    </td>
+                    <td>
+                        <p>5333330000000008</p>
+                        <?php esc_html_e('Verification Challenges:', 'event_espresso'); ?><br/>
+                        1. Thomason<br/>
+                        2. St Louis & Dallas<br/>
+                        3. Smith
+                    </td>
                 </tr>
             </tbody>
         </table>

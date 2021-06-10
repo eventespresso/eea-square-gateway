@@ -21,6 +21,7 @@ jQuery(document).ready(function($) {
 	 *		browserNotSupported: string,
 	 *		getTokenError: string,
 	 *		formValidationNotice: string,
+	 *		noVerificationToken: string,
 	 * }}
 	 */
 	function EeaSquarePayments() {
@@ -271,7 +272,7 @@ jQuery(document).ready(function($) {
 				this.paymentMethod = this.card;
 			} catch (error) {
 				// Got an error. Display and continue.
-				this.paymentError(error);
+				this.paymentError(error, true);
 			}
 
 			// Digital Wallet.
@@ -282,13 +283,13 @@ jQuery(document).ready(function($) {
 					this.applePay = await this.initializeApplePay(this.squarePayments);
 					this.applePayButton.style.display = 'inline-block';
 				} catch (error) {
-					this.paymentError(error);
+					this.paymentError(error, false);
 				}
 				try {
 					// Google Pay.
 					this.googlePay = await this.initializeGooglePay(this.squarePayments);
 				} catch (error) {
-					this.paymentError(error);
+					this.paymentError(error, false);
 				}
 			}
 
@@ -343,15 +344,21 @@ jQuery(document).ready(function($) {
 		 */
 		this.tokenizePayment = async function(paymentMethod) {
 			const tokenResult = await paymentMethod.tokenize();
-			let verificationToken;
+			let verificationToken = '';
 			if (tokenResult.status === 'OK') {
 				// If this is a card payment, do a SCA.
 				if (this.doSca) {
 					verificationToken = await this.verifyBuyer(this.squarePayments, tokenResult.token);
+					if (verificationToken) {
+						this.paymentSuccess(tokenResult.token, tokenResult, verificationToken);
+					} else {
+						this.logError(eeaSquareParameters.noVerificationToken);
+					}
+				} else {
+					this.paymentSuccess(tokenResult.token, tokenResult, verificationToken);
 				}
-				this.paymentSuccess(tokenResult.token, tokenResult, verificationToken);
 			} else {
-				this.paymentError(tokenResult.status);
+				this.paymentError(tokenResult.status, false);
 			}
 		};
 
@@ -435,8 +442,12 @@ jQuery(document).ready(function($) {
 				this.submitPaymentButton.prop('disabled', true).addClass('spco-disabled-submit-btn');
 				// In case this was disabled.
 				this.spco.allow_enable_submit_buttons = true;
-				// Tokenize the payment method.
-				this.tokenizePayment(this.paymentMethod);
+				try {
+					// Tokenize the payment method.
+					this.tokenizePayment(this.paymentMethod);
+				} catch (error) {
+					this.paymentError(error.message, true);
+				}
 			} else {
 				// Don't enable the SPCO submit button after this message.
 				this.spco.allow_enable_submit_buttons = false;
@@ -453,6 +464,7 @@ jQuery(document).ready(function($) {
 		 * @param {string} token
 		 */
 		this.verifyBuyer = async function(payments, token) {
+			let verificationResults = '';
 			const verificationDetails = {
 				amount: this.payAmount,
 				currencyCode: eeaSquareParameters.paymentCurrency,
@@ -473,11 +485,18 @@ jQuery(document).ready(function($) {
 				},
 			};
 
-			const verificationResults = await payments.verifyBuyer(
-				token,
-				verificationDetails
-			);
-			return verificationResults.token;
+			// Catch any errors from the validation screen. Or a simple Cancel.
+			try {
+				const verification = await payments.verifyBuyer(
+					token,
+					verificationDetails
+				);
+				verificationResults = verification.token;
+			} catch (error) {
+				this.paymentError(error.message, true);
+			}
+
+			return verificationResults;
 		}
 
 
@@ -515,9 +534,10 @@ jQuery(document).ready(function($) {
 		/**
 		 * @function paymentError
 		 * This re-enables the Pay button, displays and logs the error.
-		 * @param  errors
+		 * @param {array|string} errors
+		 * @param {boolean} displayMsg
 		 */
-		this.paymentError = function(errors) {
+		this.paymentError = function(errors, displayMsg) {
 			let errorsMessage = '';
 			// Re-enable the payment button.
 			this.submitPaymentButton.prop('disabled', false).removeClass('spco-disabled-submit-btn');
@@ -534,6 +554,13 @@ jQuery(document).ready(function($) {
 				'',
 				this.spco.tag_message_for_debugging('squareResponseHandler error', errorsMessage)
 			);
+
+			// Display message.
+			if (displayMsg) {
+				this.spco.allow_enable_submit_buttons = false;
+				this.spco.display_messages(this.notification, true);
+			}
+			// Log the error in back-end.
 			this.logError(errorsMessage);
 		};
 

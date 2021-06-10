@@ -250,6 +250,7 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
                 'event_espresso'
             ),
             'formValidationNotice' => esc_html__('Billing form information not valid.', 'event_espresso'),
+            'noVerificationToken'  => esc_html__('Missing the Verification token.', 'event_espresso'),
         ];
         return $squareParameters;
     }
