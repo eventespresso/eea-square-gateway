@@ -17,7 +17,7 @@ class EE_SquareGateway extends EE_Addon
      * Register this add-on with EE.
      *
      * @return void
-     * @throws EE_Error|ReflectionException
+     * @throws EE_Error
      */
     public static function registerAddon()
     {
@@ -40,10 +40,6 @@ class EE_SquareGateway extends EE_Addon
                         'SquareOnsite' . DS . 'forms' . DS . 'BillingForm.php',
                     'SettingsForm'      => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
                         'SquareOnsite' . DS . 'forms' . DS . 'SettingsForm.php',
-                    'EESquareApiBase'   => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'api' . DS . 'EESquareApiBase.php',
-                    'EESquareOrder'     => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'api' . DS . 'EESquareOrder.php',
-                    'EESquarePayment'   => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'api' . DS . 'EESquarePayment.php',
-                    'EESquareLocations' => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'api' . DS . 'EESquareLocations.php',
                 ],
                 'module_paths' => [
                     EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'modules' . DS . 'EED_SquareOnsite.module.php',
