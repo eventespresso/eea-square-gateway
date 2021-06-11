@@ -1,6 +1,7 @@
 <?php
 
-use EventEspresso\Square\api\EESquareOrder;
+use EventEspresso\Square\api\order\CancelOrder;
+use EventEspresso\Square\api\SquareApi;
 
 /**
  * Class EED_SquareOnsite
@@ -84,23 +85,24 @@ class EED_SquareOnsite extends EED_Module
         }
 
         // Transaction is considered abandoned. Now we can try canceling the associated Order.
-        $orderId = $transaction->get_extra_meta('order_id', true, false);
-        $orderVersion = $transaction->get_extra_meta('order_version', true, false);
         $paymentMethod = $transaction->payment_method();
-
         // No PM ? No go.
         if (! $paymentMethod instanceof EE_Payment_Method) {
             return;
         }
+        $orderId      = $transaction->get_extra_meta('order_id', true, false);
+        $orderVersion = $transaction->get_extra_meta('order_version', true, false);
         $pmSettings = $paymentMethod->settings_array();
-        $gateway = $paymentMethod->type_obj()->get_gateway();
-        if ($orderId && is_array($pmSettings) && isset($pmSettings['access_token'])) {
-            $ordersApi = new EESquareOrder($payment, $gateway, $pmSettings['debug_mode']);
-            $ordersApi->setApplicationId($pmSettings['application_id']);
-            $ordersApi->setAccessToken($pmSettings['access_token']);
-            $ordersApi->setUseDwallet($pmSettings['use_dwallet']);
-            $ordersApi->setLocationId($pmSettings['location_id']);
-            $ordersApi->cancel($orderId, $orderVersion);
+        if ($orderId && isset($pmSettings['access_token']) ) {
+            $SquareApi = new SquareApi(
+                $pmSettings['access_token'],
+                $pmSettings['application_id'],
+                $pmSettings['use_dwallet'],
+                $pmSettings['debug_mode'],
+                $pmSettings['location_id']
+            );
+            $CancelOrder = new CancelOrder($SquareApi, $transaction->ID());
+            $CancelOrder->sendRequest($orderId, $orderVersion);
         }
     }
 }
