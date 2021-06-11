@@ -2,7 +2,6 @@
 
 namespace EventEspresso\Square\api;
 
-use EventEspresso\Square\api\ResponseHandler;
 use EventEspresso\Square\domain\Domain;
 
 /**

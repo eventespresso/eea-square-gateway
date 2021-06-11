@@ -1,7 +1,7 @@
 <?php
 
 use EventEspresso\Square\api\order\CreateOrder;
-use EventEspresso\Square\api\order\PaymentApi;
+use EventEspresso\Square\api\payment\PaymentApi;
 use EventEspresso\Square\api\SquareApi;
 
 /**

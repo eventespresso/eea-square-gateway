@@ -1,6 +1,6 @@
 <?php
 
-namespace EventEspresso\Square\api\order;
+namespace EventEspresso\Square\api\payment;
 
 use EE_Error;
 use EE_Payment;

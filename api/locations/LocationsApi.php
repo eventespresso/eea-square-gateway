@@ -1,6 +1,6 @@
 <?php
 
-namespace EventEspresso\Square\api\order;
+namespace EventEspresso\Square\api\locations;
 
 use EventEspresso\Square\api\SquareApi;
 

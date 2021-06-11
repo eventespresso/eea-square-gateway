@@ -1,6 +1,6 @@
 <?php
 
-use EventEspresso\Square\api\order\LocationsApi;
+use EventEspresso\Square\api\locations\LocationsApi;
 use EventEspresso\Square\api\SquareApi;
 use EventEspresso\Square\domain\Domain;
 use EventEspresso\core\exceptions\InvalidDataTypeException;
