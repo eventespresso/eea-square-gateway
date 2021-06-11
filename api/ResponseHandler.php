@@ -2,9 +2,6 @@
 
 namespace EventEspresso\Square\api;
 
-use function esc_html__;
-use function is_wp_error;
-
 class ResponseHandler
 {
     /**
