@@ -67,17 +67,17 @@ class SquareApi
      * @param string $locationId
      */
     public function __construct(
-        string $applicationId,
         string $accessToken,
+        string $applicationId,
         string $useDwallet,
         bool $sandboxMode = true,
         string $locationId = ''
     ) {
         $this->accessToken   = $accessToken;
         $this->applicationId = $applicationId;
-        $this->locationId    = $locationId;
-        $this->sandboxMode   = $sandboxMode;
         $this->useDwallet    = $useDwallet;
+        $this->sandboxMode   = $sandboxMode;
+        $this->locationId    = $locationId;
         // Is this a sandbox request.
         $this->apiEndpoint = $this->sandboxMode
             ? 'https://connect.squareupsandbox.com/v2/'
