@@ -7,7 +7,7 @@ namespace EventEspresso\Square\api;
  * Value Object used by the SquareAPI
  *
  * @author  Nazar Kolivoshka
- * @package EventEspresso\Square\api\order
+ * @package EventEspresso\Square\api
  * @since   $VID:$
  */
 class IdempotencyKey

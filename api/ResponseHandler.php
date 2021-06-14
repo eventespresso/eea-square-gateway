@@ -2,6 +2,14 @@
 
 namespace EventEspresso\Square\api;
 
+/**
+ * Class ResponseHandler
+ * Helper methods to handle the API responses.
+ *
+ * @author  Brent Christensen
+ * @package EventEspresso\Square\api
+ * @since   $VID:$
+ */
 class ResponseHandler
 {
     /**
@@ -48,7 +56,7 @@ class ResponseHandler
      */
     private function setError(array $error)
     {
-        $this->errors = array_merge($this->errors, $error);
+        $this->errors = ['error' => $error];
     }
 
 

@@ -9,9 +9,9 @@ use EventEspresso\Square\domain\Domain;
  *
  * A base class for all Square API components used in this add-on.
  *
- * @package        Event Espresso
- * @subpackage     eea-square-gateway
- * @author         Nazar Kolivoshka
+ * @author  Nazar Kolivoshka
+ * @package EventEspresso\Square\api
+ * @since   $VID:$
  */
 class SquareApi
 {

@@ -31,7 +31,8 @@ class LocationsApi
      *
      * @param SquareApi        $api
      */
-    public function __construct(SquareApi $api) {
+    public function __construct(SquareApi $api)
+    {
         $this->api               = $api;
         $this->post_url          = $this->api->apiEndpoint() . 'locations';
     }

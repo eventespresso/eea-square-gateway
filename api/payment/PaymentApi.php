@@ -11,9 +11,10 @@ use ReflectionException;
 
 /**
  * Class PaymentApi
+ * Handles Square Payments API calls.
  *
  * @author  Nazar Kolivoshka
- * @package EventEspresso\Square\api\order
+ * @package EventEspresso\Square\api\payment
  * @since   $VID:$
  */
 class PaymentApi
