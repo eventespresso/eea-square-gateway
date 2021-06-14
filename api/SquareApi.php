@@ -157,7 +157,7 @@ class SquareApi
             return $this->response_handler->errors();
         }
         // Ok, the response seems to be just right. Return the data.
-        return $apiResponse->order();
+        return $apiResponse;
     }
 
 

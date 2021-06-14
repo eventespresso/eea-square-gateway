@@ -96,7 +96,8 @@ class CreateOrder extends OrdersApi
         $order             = $this->adjustResponseTotal($calculateResponse, $order, $payment_amount, $currency);
 
         // Create Order request.
-        return $this->api->sendRequest($order, $this->post_url);
+        $create_response = $this->api->sendRequest($order, $this->post_url);
+        return $this->validateOrder($create_response);
     }
 
 
@@ -357,5 +358,28 @@ class CreateOrder extends OrdersApi
             }
         }
         return $order;
+    }
+
+
+    /**
+     * Makes sure that we have received an Order object back from the SquareApi.
+     *
+     * @param $apiResponse
+     * @return Object|array
+     */
+    public function validateOrder($apiResponse)
+    {
+        if (! isset($apiResponse->order)) {
+            return [
+                'error' => [
+                    'code'    => 'missing_order',
+                    'message' => esc_html__(
+                        'Unexpected error. A Square Order Response was not returned.',
+                        'event_espresso'
+                    ),
+                ]
+            ];
+        }
+        return $apiResponse->order;
     }
 }

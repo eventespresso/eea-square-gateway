@@ -130,19 +130,6 @@ class ResponseHandler
                 ]
             );
             $this->setInValid();
-            return;
-        }
-        if (! isset($response->order)) {
-            $this->setError(
-                [
-                    'code'    => 'missing_order',
-                    'message' => esc_html__(
-                        'Unexpected error. A Square Order Response was not returned.',
-                        'event_espresso'
-                    ),
-                ]
-            );
-            $this->setInValid();
         }
     }
 }

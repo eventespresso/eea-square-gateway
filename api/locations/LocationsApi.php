@@ -29,12 +29,12 @@ class LocationsApi
     /**
      * CancelOrder constructor.
      *
-     * @param SquareApi        $api
+     * @param SquareApi $api
      */
     public function __construct(SquareApi $api)
     {
-        $this->api               = $api;
-        $this->post_url          = $this->api->apiEndpoint() . 'locations';
+        $this->api      = $api;
+        $this->post_url = $this->api->apiEndpoint() . 'locations';
     }
 
 
