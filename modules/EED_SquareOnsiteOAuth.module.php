@@ -1,6 +1,7 @@
 <?php
 
-use EventEspresso\Square\api\EESquareLocations;
+use EventEspresso\Square\api\locations\LocationsApi;
+use EventEspresso\Square\api\SquareApi;
 use EventEspresso\Square\domain\Domain;
 use EventEspresso\core\exceptions\InvalidDataTypeException;
 use EventEspresso\core\exceptions\InvalidInterfaceException;
@@ -171,7 +172,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         if (
             array_key_exists('debugMode', $_POST)
             && in_array($_POST['debugMode'], ['0', '1'], true)
-            && $square->debug_mode() !== (int) $_POST['debugMode']
+            && (bool) $square->debug_mode() !== (bool) $_POST['debugMode']
         ) {
             $square->save(['PMD_debug_mode' => $_POST['debugMode']]);
         }
@@ -567,20 +568,18 @@ class EED_SquareOnsiteOAuth extends EED_Module
     public static function getMerchantLocations(EE_Payment_Method $pmInstance)
     {
         try {
-            $accessToken = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
-            $appId = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true);
-            $dWallet = $pmInstance->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true);
+            $access_token = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
+            $application_id = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true);
+            $use_digital_wallet = $pmInstance->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true);
         } catch (EE_Error | ReflectionException $e) {
             $error['error']['message'] = $e->getMessage();
             $error['error']['code'] = $e->getCode();
             return $error;
         }
         // Create the API object/helper.
-        $listsApi = new EESquareLocations($pmInstance->debug_mode());
-        $listsApi->setApplicationId($appId);
-        $listsApi->setAccessToken($accessToken);
-        $listsApi->setUseDwallet($dWallet);
-        return $listsApi->list();
+        $SquareApi = new SquareApi($access_token, $application_id, $use_digital_wallet, $pmInstance->debug_mode());
+        $locations_api = new LocationsApi($SquareApi);
+        return $locations_api->listLocations();
     }
 
 

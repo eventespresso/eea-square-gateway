@@ -1,7 +1,8 @@
 <?php
 
-use EventEspresso\Square\api\EESquareOrder;
-use EventEspresso\Square\api\EESquarePayment;
+use EventEspresso\Square\api\order\CreateOrder;
+use EventEspresso\Square\api\payment\PaymentApi;
+use EventEspresso\Square\api\SquareApi;
 
 /**
  * Class EEG_SquareOnsite
@@ -48,11 +49,12 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      * Process the payment.
      *
      * @param EEI_Payment $payment
-     * @param array       $billing_info
+     * @param array|null  $billing_info
      * @return EE_Payment|EEI_Payment
      * @throws EE_Error
+     * @throws ReflectionException
      */
-    public function do_direct_payment($payment, $billing_info = [])
+    public function do_direct_payment($payment, $billing_info = null)
     {
         $failedStatus = $this->_pay_model->failed_status();
         $declinedStatus = $this->_pay_model->declined_status();
@@ -70,7 +72,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         $orderId = $transaction->get_extra_meta('order_id', true, false);
         if (! $orderId) {
             // Create an Order for this transaction.
-            $order = $this->createAnOrder($payment);
+            $create_order_api = $this->getCreateOrderApi($payment);
+            $order            = $create_order_api->create($payment);
             if (is_array($order) && isset($order['error'])) {
                 $errorMessage = (string) $order['error']['message'];
                 $orderError = esc_html__('No order created !', 'event_espresso');
@@ -89,154 +92,181 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         }
 
         // Something went wrong if we got here.
-        $payment = $this->setPaymentStatus(
+        return $this->setPaymentStatus(
             $payment,
             $declinedStatus,
             esc_html__('Was not able to create a payment. Please contact admin.', 'event_espresso'),
             $paymentMgs
         );
-
-        return $payment;
     }
 
 
     /**
      * Create a Square Order for the transaction.
      *
-     * @param EEI_Payment  $payment
-     * @return Object|array
+     * @param EE_Payment $payment
+     * @return CreateOrder
+     * @throws EE_Error
+     * @throws ReflectionException
      */
-    public function createAnOrder($payment)
+    private function getCreateOrderApi(EE_Payment $payment): CreateOrder
     {
-        $ordersApi = new EESquareOrder($payment, $this, $this->_debug_mode);
-        $ordersApi->setApplicationId($this->_application_id);
-        $ordersApi->setAccessToken($this->_access_token);
-        $ordersApi->setUseDwallet($this->_use_dwallet);
-        $ordersApi->setLocationId($this->_location_id);
-        return $ordersApi->create();
+        return new CreateOrder(
+            $this,
+            $this->getSquareApi(),
+            $payment->transaction()->ID(),
+            $this->getPromotionsConfig()
+        );
     }
 
 
     /**
      * Create a Square Payment for the transaction.
      *
-     * @param EEI_Payment  $payment
-     * @param array        $billing_info
-     * @param string       $orderId
+     * @param EE_Payment $payment
+     * @param array      $billing_info
      * @return Object
+     * @throws EE_Error
+     * @throws ReflectionException
      */
-    public function createPaymentObject($payment, $billing_info, $orderId)
+    private function getPaymentApi(EE_Payment $payment, array $billing_info): PaymentApi
     {
-        $paymentsApi = new EESquarePayment($payment, $this, $this->_debug_mode);
-        $paymentsApi->setApplicationId($this->_application_id);
-        $paymentsApi->setAccessToken($this->_access_token);
-        $paymentsApi->setUseDwallet($this->_use_dwallet);
-        $paymentsApi->setLocationId($this->_location_id);
-        $paymentsApi->setPaymentToken($billing_info['eea_square_token']);
-        $paymentsApi->setVerificationToken($billing_info['eea_square_sca']);
-        if ($orderId) {
-            $paymentsApi->setOrderId($orderId);
-        }
-        return $paymentsApi;
+        return new PaymentApi(
+            $this,
+            $this->getSquareApi(),
+            $billing_info['eea_square_token'],
+            $billing_info['eea_square_sca'],
+            $payment->transaction()->ID()
+        );
+    }
+
+
+    /**
+     * @return EE_Promotions_Config|null
+     */
+    private function getPromotionsConfig(): ?EE_Promotions_Config
+    {
+        return class_exists('EE_Promotions_Config') ? EE_Registry::instance()->CFG->get_config(
+            'addons',
+            'promotions',
+            'EE_Promotions_Config'
+        ) : null;
+    }
+
+
+    /**
+     * @return SquareApi
+     */
+    private function getSquareApi(): SquareApi
+    {
+        return new SquareApi(
+            $this->_access_token,
+            $this->_application_id,
+            $this->_use_dwallet,
+            $this->_debug_mode,
+            $this->_location_id
+        );
     }
 
 
     /**
      * Create a Square Order for the transaction.
      *
-     * @param EEI_Payment  $payment
-     * @param array        $billing_info
-     * @param string       $orderId
+     * @param EE_Payment $payment
+     * @param array      $billing_info
+     * @param string     $orderId
      * @return EE_Payment
+     * @throws EE_Error
+     * @throws ReflectionException
      */
-    public function createAndProcessPayment($payment, $billing_info, $orderId = '')
+    public function createAndProcessPayment(EE_Payment $payment, array $billing_info, string $orderId = ''): EE_Payment
     {
         $approvedStatus = $this->_pay_model->approved_status();
         $declinedStatus = $this->_pay_model->declined_status();
 
-        // Payment object.
-        $squarePayment = $this->createPaymentObject($payment, $billing_info, $orderId);
-        $responsePayment = $squarePayment->create();
+        $payment_api = $this->getPaymentApi($payment, $billing_info);
+        $payment_response = $payment_api->createPayment($payment, $orderId);
 
         // If it's a string - it's an error. So pass that message further.
-        if (is_array($responsePayment) && isset($responsePayment['error'])) {
-            return $this->setPaymentStatus($payment, $declinedStatus, '', $responsePayment['error']['message']);
+        if (is_array($payment_response) && isset($payment_response['error'])) {
+            return $this->setPaymentStatus($payment, $declinedStatus, '', $payment_response['error']['message']);
         }
 
         $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');
         // Get the payment object and check the status.
-        if ($responsePayment->status === 'COMPLETED') {
-            $paidAmount = $responsePayment->amount_money->amount;
-            $payment = $this->setPaymentStatus(
-                $payment,
-                $approvedStatus,
-                'Square payment ID: ' . $responsePayment->id . ', status: ' . $responsePayment->status,
-                '',
-                $paidAmount
-            );
-            // Save card details.
-            if (isset($responsePayment->card_details)) {
-                $this->savePaymentDetails($payment, $responsePayment);
-            }
-            // Save the gateway transaction details.
-            $payment->set_extra_accntng('Square Payment ID: ' . $responsePayment->id);
+        if ($payment_response->status === 'COMPLETED') {
+            $this->updateEspressoPayment($payment, $payment_response, $approvedStatus);
             // Return as the payment is COMPLETE.
             return $payment;
-        } elseif ($responsePayment->status === 'APPROVED') {
+        }
+        if ($payment_response->status === 'APPROVED') {
             // Huh, this should have auto completed... Ok, try to complete the payment.
             // Submit the payment.
-            $completeResponse = $squarePayment->complete($responsePayment->id);
+            $completeResponse = $payment_api->completePayment($payment, $payment_response->id, $orderId);
             if (is_object($completeResponse) && isset($completeResponse->payment)) {
                 $completePayment = $completeResponse->payment;
                 if ($completePayment->status === 'COMPLETED') {
-                    $paidAmount = $completePayment->amount_money->amount;
-                    $payment = $this->setPaymentStatus(
-                        $payment,
-                        $approvedStatus,
-                        'Square payment ID: ' . $completePayment->id . ', status: ' . $completePayment->status,
-                        '',
-                        $paidAmount
-                    );
-                    // Save card details.
-                    if (isset($responsePayment->card_details)) {
-                        $this->savePaymentDetails($payment, $completePayment);
-                    }
-                    // Save the gateway transaction details.
-                    $payment->set_extra_accntng('Square Payment ID: ' . $responsePayment->id);
+                    $this->updateEspressoPayment($payment, $completePayment, $approvedStatus);
                     // Return as the payment is COMPLETE.
                     return $payment;
-                } else {
-                    $paymentMgs = esc_html__('Unknown error. Please contact admin.', 'event_espresso');
                 }
-            } else {
-                $paymentMgs = esc_html__('Unknown error. Please contact admin.', 'event_espresso');
             }
+            $paymentMgs = esc_html__('Unknown error. Please contact admin.', 'event_espresso');
         }
 
         // Seems like something went wrong if we got here.
-        $payment = $this->setPaymentStatus(
+        return $this->setPaymentStatus(
             $payment,
             $declinedStatus,
-            'Square payment ID: ' . $responsePayment->id . ', status: ' . $responsePayment->status,
+            'Square payment ID: ' . $payment_response->id . ', status: ' . $payment_response->status,
             $paymentMgs
         );
+    }
 
-        return $payment;
+
+    /**
+     * @param EE_Payment $payment
+     * @param mixed      $payment_response
+     * @param string     $status
+     * @throws EE_Error
+     * @since   $VID:$
+     */
+    private function updateEspressoPayment(EE_Payment $payment, $payment_response, string $status)
+    {
+        $payment = $this->setPaymentStatus(
+            $payment,
+            $status,
+            'Square payment ID: ' . $payment_response->id . ', status: ' . $payment_response->status,
+            '',
+            $payment_response->amount_money->amount
+        );
+        // Save card details.
+        if (isset($payment_response->card_details)) {
+            $this->savePaymentDetails($payment, $payment_response);
+        }
+        // Save the gateway transaction details.
+        $payment->set_extra_accntng('Square Payment ID: ' . $payment_response->id);
     }
 
 
     /**
      * Set a payment status and log the data. Universal for success and failed payments.
      *
-     * @param EEI_Payment  $payment
+     * @param EE_Payment   $payment
      * @param string       $status
      * @param array|string $responseData
      * @param string       $errMessage
      * @param int          $paidAmount
-     * @return EEI_Payment
+     * @return EE_Payment
+     * @throws EE_Error
      */
-    public function setPaymentStatus(EEI_Payment $payment, $status, $responseData, $errMessage, $paidAmount = 0)
-    {
+    public function setPaymentStatus(
+        EEI_Payment $payment,
+        string $status,
+        $responseData,
+        string $errMessage,
+        int $paidAmount = 0
+    ): EE_Payment {
         if ($status === $this->_pay_model->approved_status()) {
             $paymentMsg = esc_html__('Success', 'event_espresso');
             $defaultLogText = 'Square payment:';
@@ -260,9 +290,9 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      * Some currencies have no subunits, so leave them in the currency's main units.
      *
      * @param float $amount
-     * @return int in the currency's smallest unit (e.g., pennies)
+     * @return float in the currency's smallest unit (e.g., pennies)
      */
-    public function convertToSubunits($amount)
+    public function convertToSubunits(float $amount): float
     {
         $decimals = EE_PMT_SquareOnsite::getDecimalPlaces();
         return round($amount * pow(10, $decimals), $decimals);
@@ -309,13 +339,13 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      *
      * @param mixed $payment
      * @param array $billingInfo
-     * @return EEI_Payment
+     * @return EE_Payment
      * @throws EE_Error
      */
-    public function isPaymentValid($payment, $billingInfo)
+    public function isPaymentValid($payment, array $billingInfo): EE_Payment
     {
         $failedStatus = $this->_pay_model->failed_status();
-        if (! $payment instanceof EEI_Payment) {
+        if (! $payment instanceof EE_Payment) {
             $payment = EE_Payment::new_instance();
             $errorMessage = esc_html__('Error. No associated payment was found.', 'event_espresso');
             return $this->setPaymentStatus($payment, $failedStatus, $errorMessage, $errorMessage);
