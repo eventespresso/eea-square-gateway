@@ -59,7 +59,7 @@ class OrderItems
     public function addDiscount(array $discount)
     {
         $this->discounts[] = $discount;
-        // Also track discount UUIDs separately
+        // Also track discount UUIDs separately, for line items 'applied_discounts' parameter.
         $this->addDiscountID($discount['uid']);
     }
 
@@ -88,7 +88,7 @@ class OrderItems
     public function addTax(array $tax)
     {
         $this->taxes[] = $tax;
-        // Also track tax UUIDs separately
+        // Also track tax UUIDs separately. Needed to apply the IDs to each line item ('applied_taxes' parameter).
         $this->addTaxID($tax['uid']);
     }
 
@@ -144,6 +144,15 @@ class OrderItems
     public function hasTaxes(): bool
     {
         return ! empty($this->taxes);
+    }
+
+
+    /**
+     * @return bool
+     */
+    public function hasDiscounts(): bool
+    {
+        return ! empty($this->discounts);
     }
 
 

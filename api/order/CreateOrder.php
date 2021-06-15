@@ -102,6 +102,8 @@ class CreateOrder extends OrdersApi
 
 
     /**
+     * Applies a discount if this is a partial payment. Otherwise Square won't like it.
+     *
      * @param float  $transaction_total
      * @param float  $paid_to_date
      * @param float  $payment_amount
@@ -134,6 +136,8 @@ class CreateOrder extends OrdersApi
 
 
     /**
+     * Adds all taxes applied to the payment.
+     *
      * @param array|null $tax_line_items
      * @param string     $currency
      * @throws EE_Error
@@ -141,13 +145,13 @@ class CreateOrder extends OrdersApi
      */
     private function applyTaxes(array $tax_line_items, string $currency)
     {
-        // Add Taxes.
         if (! empty($tax_line_items)) {
+            $promo_affects_tax = $this->promotionsAffectTaxes();
             foreach ($tax_line_items as $tax_line_item) {
                 if ($tax_line_item instanceof EE_Line_Item) {
                     // If Taxes are counted before the discounts or this is a Partial payment
                     // - list the Taxes as simple Line Items so that Square doesn't count them by their own.
-                    if (! $this->partial_payment && $this->promotionsAffectTaxes()) {
+                    if (! $this->partial_payment && $promo_affects_tax) {
                         $limeItemTaxPercent = (string)$tax_line_item->percent();
                         $lineItemTaxUid     = 'tax-' . $tax_line_item->ID() . '-' . $limeItemTaxPercent;
                         $lineItemTax        = [
@@ -168,7 +172,7 @@ class CreateOrder extends OrdersApi
                                 'currency' => $currency,
                             ],
                         ];
-                        $orderItems[]  = $taxAsLineItem;
+                        $this->order_items->addItem($taxAsLineItem);
                         $this->order_items->incrementCount();
                     }
                 }
@@ -178,6 +182,8 @@ class CreateOrder extends OrdersApi
 
 
     /**
+     * Adds all promotions applied in the payment.
+     *
      * @param array  $eventLineItems
      * @param string $currency
      * @throws EE_Error
@@ -185,7 +191,6 @@ class CreateOrder extends OrdersApi
      */
     private function addPromotionLineItems(array $eventLineItems, string $currency)
     {
-        // First add all promotions.
         foreach ($eventLineItems as $discountItem) {
             if ($discountItem instanceof EE_Line_Item && $discountItem->OBJ_type() === 'Promotion') {
                 $itemDiscountAmount = $this->gateway->convertToSubunits(abs($discountItem->total()));
@@ -208,6 +213,8 @@ class CreateOrder extends OrdersApi
 
 
     /**
+     * Adds line items and applied promotions.
+     *
      * @param array  $eventLineItems
      * @param string $currency
      * @throws EE_Error
@@ -215,7 +222,6 @@ class CreateOrder extends OrdersApi
      */
     private function addRemainingLineItems(array $eventLineItems, string $currency)
     {
-        // Now add line items and applied promotions.
         foreach ($eventLineItems as $eventItem) {
             if ($eventItem instanceof EE_Line_Item && $eventItem->OBJ_type() !== 'Promotion') {
                 $itemMoney     = $this->gateway->convertToSubunits($eventItem->unit_price());
@@ -242,6 +248,8 @@ class CreateOrder extends OrdersApi
 
 
     /**
+     * In case we were not able to recognize some item, adds the difference as an extra line item.
+     *
      * @param EE_Transaction $transaction
      * @param string         $currency
      * @throws EE_Error
@@ -268,6 +276,8 @@ class CreateOrder extends OrdersApi
 
 
     /**
+     * Forms the Order.
+     *
      * @param int $TXN_ID
      * @return array
      */
@@ -288,14 +298,16 @@ class CreateOrder extends OrdersApi
         if ($this->order_items->hasTaxes()) {
             $order['order']['taxes'] = $this->order_items->taxes();
         }
-        if (! empty($orderDiscounts)) {
-            $order['order']['discounts'] = $orderDiscounts;
+        if (! empty($this->order_items->hasDiscounts())) {
+            $order['order']['discounts'] = $this->order_items->discounts();
         }
         return $order;
     }
 
 
     /**
+     * Gets EE config. Do the the promotions affect taxes.
+     *
      * @return bool
      */
     private function promotionsAffectTaxes(): bool
@@ -308,6 +320,9 @@ class CreateOrder extends OrdersApi
 
 
     /**
+     * Adjusts the Order total if there is small difference.
+     * This can occur when Square uses bankers rounding on calculating the order totals.
+     *
      * @param mixed  $calculateResponse
      * @param array  $order
      * @param float  $payment_amount
@@ -323,7 +338,6 @@ class CreateOrder extends OrdersApi
         if (! is_string($calculateResponse) && isset($calculateResponse->order)) {
             $calculateOrder = $calculateResponse->order;
             // If order total and event total don't match try adjusting the total money mount.
-            // This can occur when Square uses bankers rounding on calculating the order totals.
             $eventMoney  = (int)$this->gateway->convertToSubunits($payment_amount);
             $orderOffset = (int)$calculateOrder->total_money->amount - $eventMoney;
             // 10 ? - just to be safe.
