@@ -581,6 +581,7 @@ jQuery(document).ready(function($) {
 		 */
 		this.disableSPCOSubmitButtonsIfSquareSelected = function() {
 			if (this.selected && this.submitPaymentButton.length > 0) {
+				this.spco.allow_enable_submit_buttons = false;
 				this.spco.disable_submit_buttons();
 			}
 		};
