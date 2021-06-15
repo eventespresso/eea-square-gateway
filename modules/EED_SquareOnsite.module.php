@@ -93,7 +93,7 @@ class EED_SquareOnsite extends EED_Module
         $orderId      = $transaction->get_extra_meta('order_id', true, false);
         $orderVersion = $transaction->get_extra_meta('order_version', true, false);
         $pmSettings = $paymentMethod->settings_array();
-        if ($orderId && isset($pmSettings['access_token']) ) {
+        if ($orderId && isset($pmSettings['access_token'])) {
             $SquareApi = new SquareApi(
                 $pmSettings['access_token'],
                 $pmSettings['application_id'],
@@ -102,7 +102,7 @@ class EED_SquareOnsite extends EED_Module
                 $pmSettings['location_id']
             );
             $CancelOrder = new CancelOrder($SquareApi, $transaction->ID());
-            $CancelOrder->sendRequest($orderId, $orderVersion);
+            $CancelOrder->cancel($orderId, $orderVersion);
         }
     }
 }

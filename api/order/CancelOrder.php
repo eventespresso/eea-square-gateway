@@ -20,7 +20,7 @@ class CancelOrder extends OrdersApi
      * @param string         $orderVersion
      * @return Object|array
      */
-    public function sendRequest(string $orderId, string $orderVersion)
+    public function cancel(string $orderId, string $orderVersion)
     {
         // Send cancel Order request.
         return $this->api->sendRequest(

@@ -72,8 +72,8 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         $orderId = $transaction->get_extra_meta('order_id', true, false);
         if (! $orderId) {
             // Create an Order for this transaction.
-            $order_api = $this->getOrderApi($payment);
-            $order     = $order_api->sendRequest($payment);
+            $create_order_api = $this->getCreateOrderApi($payment);
+            $order            = $create_order_api->create($payment);
             if (is_array($order) && isset($order['error'])) {
                 $errorMessage = (string) $order['error']['message'];
                 $orderError = esc_html__('No order created !', 'event_espresso');
@@ -109,7 +109,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      * @throws EE_Error
      * @throws ReflectionException
      */
-    private function getOrderApi(EE_Payment $payment): CreateOrder
+    private function getCreateOrderApi(EE_Payment $payment): CreateOrder
     {
         return new CreateOrder(
             $this,

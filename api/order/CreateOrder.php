@@ -72,7 +72,7 @@ class CreateOrder extends OrdersApi
      * @throws EE_Error
      * @throws ReflectionException
      */
-    public function sendRequest(EE_Payment $payment)
+    public function create(EE_Payment $payment)
     {
         $this->order_items = new OrderItems();
         $transaction       = $payment->transaction();
