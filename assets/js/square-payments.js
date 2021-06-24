@@ -281,7 +281,6 @@ jQuery(document).ready(function($) {
 				try {
 					// Apple Pay.
 					this.applePay = await this.initializeApplePay(this.squarePayments);
-					this.applePayButton.style.display = 'inline-block';
 				} catch (error) {
 					this.paymentError(error, false);
 				}
