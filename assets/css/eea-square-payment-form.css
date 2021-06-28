@@ -1,0 +1,19 @@
+/* Indicates how Google Pay button will appear */
+.google-pay-button, #eea-square-pm-google-pay .gpay-card-info-container {
+    width: 100%;
+}
+
+#eea-square-pm-google-pay .gpay-card-info-container.black.active {
+    background-color: #5f6368;
+}
+
+/* Customize the Apple Pay button */
+.apple-pay-button {
+    width: 100%;
+    -webkit-appearance: -apple-pay-button;
+    -apple-pay-button-type: plain;
+    -apple-pay-button-style: black;
+    margin-bottom: 7px;
+    height: 40px;
+    display: inline-block;
+}
