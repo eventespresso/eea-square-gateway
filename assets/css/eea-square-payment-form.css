@@ -15,4 +15,5 @@
     -apple-pay-button-style: black;
     margin-bottom: 7px;
     height: 40px;
+    display: inline-block;
 }
