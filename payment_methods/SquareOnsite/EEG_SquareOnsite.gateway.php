@@ -160,7 +160,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
     private function getSquareApi(): SquareApi
     {
         return new SquareApi(
-            $this->_access_token,
+            EED_SquareOnsiteOAuth::decryptString($this->_access_token, $this->_debug_mode),
             $this->_application_id,
             $this->_use_dwallet,
             $this->_debug_mode,

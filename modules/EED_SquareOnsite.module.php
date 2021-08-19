@@ -2,6 +2,7 @@
 
 use EventEspresso\Square\api\order\CancelOrder;
 use EventEspresso\Square\api\SquareApi;
+use EventEspresso\Square\domain\Domain;
 
 /**
  * Class EED_SquareOnsite
@@ -92,14 +93,14 @@ class EED_SquareOnsite extends EED_Module
         }
         $orderId      = $transaction->get_extra_meta('order_id', true, false);
         $orderVersion = $transaction->get_extra_meta('order_version', true, false);
-        $pmSettings = $paymentMethod->settings_array();
-        if ($orderId && isset($pmSettings['access_token'])) {
+        $pmSettings   = $paymentMethod->settings_array();
+        if ($orderId && isset($pmSettings[ Domain::META_KEY_ACCESS_TOKEN ])) {
             $SquareApi = new SquareApi(
-                $pmSettings['access_token'],
-                $pmSettings['application_id'],
-                $pmSettings['use_dwallet'],
+                $pmSettings[ Domain::META_KEY_ACCESS_TOKEN ],
+                $pmSettings[ Domain::META_KEY_APPLICATION_ID ],
+                $pmSettings[ Domain::META_KEY_USE_DIGITAL_WALLET ],
                 $pmSettings['debug_mode'],
-                $pmSettings['location_id']
+                $pmSettings[ Domain::META_KEY_LOCATION_ID ]
             );
             $CancelOrder = new CancelOrder($SquareApi, $transaction->ID());
             $CancelOrder->cancel($orderId, $orderVersion);

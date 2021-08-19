@@ -1,10 +1,13 @@
 <?php
 
+use EventEspresso\core\services\encryption\Base64Encoder;
 use EventEspresso\Square\api\locations\LocationsApi;
 use EventEspresso\Square\api\SquareApi;
 use EventEspresso\Square\domain\Domain;
 use EventEspresso\core\exceptions\InvalidDataTypeException;
 use EventEspresso\core\exceptions\InvalidInterfaceException;
+use EventEspresso\Square\tools\encryption\SquareEncryptionKeyManager;
+use EventEspresso\Square\tools\encryption\SquareOpenSSLEncryption;
 
 /**
  * Class EED_SquareOnsiteOAuth
@@ -126,16 +129,20 @@ class EED_SquareOnsiteOAuth extends EED_Module
         // Update the PM data.
         $squarePm->update_extra_meta(
             Domain::META_KEY_ACCESS_TOKEN,
-            sanitize_text_field($_GET[ Domain::META_KEY_ACCESS_TOKEN ])
+            EED_SquareOnsiteOAuth::encryptString($_GET[ Domain::META_KEY_ACCESS_TOKEN ], $squarePm->debug_mode())
         );
         $squarePm->update_extra_meta(
             Domain::META_KEY_APPLICATION_ID,
             sanitize_text_field($_GET[ Domain::META_KEY_APPLICATION_ID ])
         );
+        $refresh_token = EED_SquareOnsiteOAuth::encryptString(
+            sanitize_text_field($_GET[ Domain::META_KEY_REFRESH_TOKEN ]),
+            $squarePm->debug_mode()
+        );
         $squarePm->update_extra_meta(
             Domain::META_KEY_SQUARE_DATA,
             [
-                Domain::META_KEY_REFRESH_TOKEN => sanitize_text_field($_GET[ Domain::META_KEY_REFRESH_TOKEN ]),
+                Domain::META_KEY_REFRESH_TOKEN => $refresh_token,
                 Domain::META_KEY_EXPIRES_AT    => sanitize_key($_GET[ Domain::META_KEY_EXPIRES_AT ]),
                 Domain::META_KEY_MERCHANT_ID   => sanitize_text_field($_GET[ Domain::META_KEY_MERCHANT_ID ]),
                 Domain::META_KEY_LIVE_MODE     => sanitize_key($_GET[ Domain::META_KEY_LIVE_MODE ]),
@@ -409,7 +416,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
             $errMsg = esc_html__('Could not find the refresh token.', 'event_espresso');
             EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, false);
         }
-        $squareRefreshToken = $squareData[ Domain::META_KEY_REFRESH_TOKEN ];
+        $squareRefreshToken = EED_SquareOnsiteOAuth::decryptString(
+            $squareData[ Domain::META_KEY_REFRESH_TOKEN ],
+            $squarePm->debug_mode()
+        );
         $nonce = wp_create_nonce('eea_square_refresh_access_token');
 
         // Try refreshing the token.
@@ -473,14 +483,19 @@ class EED_SquareOnsiteOAuth extends EED_Module
             );
             $squarePm->update_extra_meta(
                 Domain::META_KEY_ACCESS_TOKEN,
-                sanitize_text_field($responseBody->access_token)
+                EED_SquareOnsiteOAuth::encryptString($responseBody->access_token, $squarePm->debug_mode())
             );
 
+
+            $refresh_token = EED_SquareOnsiteOAuth::encryptString(
+                sanitize_text_field($responseBody->refresh_token),
+                $squarePm->debug_mode()
+            );
             // Some PM data is combined to reduce DB calls.
             $squarePm->update_extra_meta(
                 Domain::META_KEY_SQUARE_DATA,
                 [
-                    Domain::META_KEY_REFRESH_TOKEN => sanitize_text_field($responseBody->refresh_token),
+                    Domain::META_KEY_REFRESH_TOKEN => $refresh_token,
                     Domain::META_KEY_EXPIRES_AT    => sanitize_key($responseBody->expires_at),
                     Domain::META_KEY_MERCHANT_ID   => sanitize_text_field($responseBody->merchant_id),
                     Domain::META_KEY_USING_OAUTH   => true,
@@ -568,7 +583,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
     public static function getMerchantLocations(EE_Payment_Method $pmInstance)
     {
         try {
-            $access_token = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
+            $access_token = EED_SquareOnsiteOAuth::decryptString(
+                $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, ''),
+                $pmInstance->debug_mode()
+            );
             $application_id = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true);
             $use_digital_wallet = $pmInstance->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true);
         } catch (EE_Error | ReflectionException $e) {
@@ -634,23 +652,70 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @throws EE_Error
      * @throws ReflectionException
      */
-    public static function isAuthenticated($squarePm)
+    public static function isAuthenticated($squarePm): bool
     {
         if (! $squarePm) {
             return false;
         }
         $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
-        $accessToken = $squarePm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
-        $locationId = $squarePm->get_extra_meta(Domain::META_KEY_LOCATION_ID, true);
+        $accessToken = EED_SquareOnsiteOAuth::decryptString(
+            $squarePm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, ''),
+            $squarePm->debug_mode()
+        );
         if (
             isset($squareData[ Domain::META_KEY_USING_OAUTH ])
             && $squareData[ Domain::META_KEY_USING_OAUTH ]
             && ! empty($accessToken)
-            && $locationId
         ) {
             return true;
         }
         return false;
+    }
+
+
+    /**
+     * Encrypt a text field.
+     *
+     * @param string $text
+     * @param bool   $sandbox_mode
+     * @return string|null
+     * @throws Exception
+     */
+    public static function encryptString($text = '', bool $sandbox_mode): ?string
+    {
+        // We sure we are getting something ?
+        if (! $text || ! is_string($text)) {
+            return $text;
+        }
+        // Do encrypt.
+        $encryptor = new SquareOpenSSLEncryption();
+        $sanitized_text = sanitize_text_field($text);
+        $key_identifier = $sandbox_mode
+            ? SquareEncryptionKeyManager::SANDBOX_ENCRYPTION_KEY_ID
+            : SquareEncryptionKeyManager::PRODUCTION_ENCRYPTION_KEY_ID;
+        return $encryptor->encrypt($sanitized_text, $key_identifier);
+    }
+
+
+    /**
+     * Decrypt a text.
+     *
+     * @param string $text
+     * @param bool   $sandbox_mode
+     * @return string|null
+     */
+    public static function decryptString($text = '', bool $sandbox_mode): ?string
+    {
+        // Are we even getting something ?
+        if (! $text || ! is_string($text)) {
+            return $text;
+        }
+        // Try decrypting.
+        $encryptor = new SquareOpenSSLEncryption();
+        $key_identifier = $sandbox_mode
+            ? SquareEncryptionKeyManager::SANDBOX_ENCRYPTION_KEY_ID
+            : SquareEncryptionKeyManager::PRODUCTION_ENCRYPTION_KEY_ID;
+        return $encryptor->decrypt($text, $key_identifier);
     }
 
 

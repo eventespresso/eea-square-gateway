@@ -4,7 +4,7 @@ namespace EventEspresso\Square\domain;
 
 /**
  * Class Domain
- * domain data regarding the Square Add-on
+ * Holds constants for the Square Add-on.
  *
  * @package        Event Espresso
  * @subpackage     eea-square-gateway

@@ -131,7 +131,7 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
      * Possibly adds debug content to Square billing form.
      *
      * @param EE_Payment_Method $paymentMethod
-     * @return string
+     * @return EE_Form_Section_Proper
      * @throws EE_Error
      */
     public function addDebugContent(EE_Payment_Method $paymentMethod)
@@ -211,7 +211,7 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
      * @throws EE_Error
      * @throws ReflectionException
      */
-    public function localizeParameters()
+    public function localizeParameters(): array
     {
         // Convert money for a display format.
         $decimalPlaces = EE_PMT_SquareOnsite::getDecimalPlaces();
@@ -219,9 +219,13 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
                    && EE_Registry::instance()->CFG->organization instanceof EE_Organization_Config
             ? EE_Registry::instance()->CFG->organization->CNT_ISO
             : '';
-        $squareParameters = [
+        $access_token = EED_SquareOnsiteOAuth::decryptString(
+            $this->_pm_instance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, ''),
+            $this->_pm_instance->debug_mode()
+        );
+        return [
+            'accessToken'       => $access_token,
             'appId'             => $this->_pm_instance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true),
-            'accessToken'       => $this->_pm_instance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true),
             'locationId'        => $this->_pm_instance->get_extra_meta(Domain::META_KEY_LOCATION_ID, true),
             'useDigitalWallet'  => $this->_pm_instance->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true),
             'paymentMethodSlug' => $this->_pm_instance->slug(),
@@ -233,25 +237,24 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
             'orgCountry'        => $orgCountry,
             'decimalPlaces'     => $decimalPlaces,
             'siteName'          => get_bloginfo('name'),
-            'noSPCOError'         => esc_html__(
+            'noSPCOError'          => esc_html__(
                 'It appears the Single Page Checkout javascript was not loaded properly! Please refresh the page and try again or contact support.',
                 'event_espresso'
             ),
-            'noSquareError'       => esc_html__(
+            'noSquareError'        => esc_html__(
                 'It appears that Square checkout JavaScript was not loaded properly! Please refresh the page and try again or contact support. Square payments will not be processed.',
                 'event_espresso'
             ),
-            'browserNotSupported' => esc_html__(
+            'browserNotSupported'  => esc_html__(
                 'It appears that this browser is not supported by Square. We apologize, but Square payment method won\'t work in this browser version.',
                 'event_espresso'
             ),
-            'getTokenError'       => esc_html__(
+            'getTokenError'        => esc_html__(
                 'There was an error while trying to get the payment token. Please refresh the page and try again or contact support.',
                 'event_espresso'
             ),
             'formValidationNotice' => esc_html__('Billing form information not valid.', 'event_espresso'),
             'noVerificationToken'  => esc_html__('Missing the Verification token.', 'event_espresso'),
         ];
-        return $squareParameters;
     }
 }
