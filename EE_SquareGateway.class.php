@@ -1,5 +1,9 @@
 <?php
 
+use EventEspresso\core\exceptions\InvalidDataTypeException;
+use EventEspresso\core\exceptions\InvalidEntityException;
+use EventEspresso\core\exceptions\InvalidInterfaceException;
+
 define('EEA_SQUARE_GATEWAY_PLUGIN_URL', plugin_dir_url(EEA_SQUARE_GATEWAY_PLUGIN_FILE));
 define('EEA_SQUARE_GATEWAY_PLUGIN_BASENAME', plugin_basename(EEA_SQUARE_GATEWAY_PLUGIN_FILE));
 
@@ -70,6 +74,34 @@ class EE_SquareGateway extends EE_Addon
      */
     public function after_registration()
     {
+        $this->registerDependencies();
+    }
+
+
+    /**
+     * Register object dependencies.
+     *
+     * @return void
+     * @throws InvalidArgumentException
+     * @throws InvalidDataTypeException
+     * @throws DomainException
+     * @throws InvalidInterfaceException
+     * @throws InvalidEntityException
+     */
+    protected function registerDependencies()
+    {
+        $this->dependencyMap()->registerDependencies(
+            'EventEspresso\Square\tools\encryption\SquareOpenSSLEncryption',
+            [
+                'EventEspresso\core\services\encryption\Base64Encoder' => EE_Dependency_Map::load_from_cache
+            ]
+        );
+        $this->dependencyMap()->registerDependencies(
+            'EventEspresso\Square\tools\encryption\SquareEncryptionKeyManager',
+            [
+                'EventEspresso\core\services\encryption\Base64Encoder' => EE_Dependency_Map::load_from_cache
+            ]
+        );
     }
 
 

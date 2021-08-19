@@ -46,8 +46,7 @@ class SquareEncryptionKeyManager extends EncryptionKeyManager
         parent::__construct($base64_encoder, self::PRODUCTION_ENCRYPTION_KEY_ID, self::ENCRYPTION_KEYS_ID);
 
         // Now add the sandbox key if doesn't exist.
-        $encryption_keys = $this->retrieveEncryptionKeys();
-        if (! $encryption_keys || ! isset($encryption_keys[ self::SANDBOX_ENCRYPTION_KEY_ID ])) {
+        if (! $this->encryptionKeyExists(self::SANDBOX_ENCRYPTION_KEY_ID)) {
             $this->addEncryptionKey(self::SANDBOX_ENCRYPTION_KEY_ID);
         }
     }

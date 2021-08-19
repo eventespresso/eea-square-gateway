@@ -10,7 +10,7 @@ use Exception;
 /**
  * Class SquareOpenSSLEncryption
  *
- * Encryption helper class set for use in the Square add-on.
+ * Encryption helper class set for use in the Square add-on. Uses OpenSSL v2.
  *
  * @author  Nazar Kolivoshka
  * @package EventEspresso\Square\tools\encryption
@@ -22,12 +22,12 @@ class SquareOpenSSLEncryption extends OpenSSLv2
      * Class constructor.
      * Setup OpenSSLv2 with Square specific encryption keys.
      *
+     * @param Base64Encoder $base64_encoder
      * @throws Exception
      */
-    public function __construct()
+    public function __construct(Base64Encoder $base64_encoder)
     {
-        $base64_encoder = new Base64Encoder();
-        // Square specific encryption keys with a default cipher method.
+        // Square specific encryption keys with a default OpenSSLv2 cipher method.
         parent::__construct(
             $base64_encoder,
             new CipherMethod(OpenSSLv2::CIPHER_METHOD, OpenSSLv2::CIPHER_METHOD_OPTION_NAME),

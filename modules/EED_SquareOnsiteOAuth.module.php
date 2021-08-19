@@ -1,6 +1,6 @@
 <?php
 
-use EventEspresso\core\services\encryption\Base64Encoder;
+use EventEspresso\core\services\loaders\LoaderFactory;
 use EventEspresso\Square\api\locations\LocationsApi;
 use EventEspresso\Square\api\SquareApi;
 use EventEspresso\Square\domain\Domain;
@@ -688,7 +688,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             return $text;
         }
         // Do encrypt.
-        $encryptor = new SquareOpenSSLEncryption();
+        $encryptor = LoaderFactory::getLoader()->getShared(SquareOpenSSLEncryption::class);
         $sanitized_text = sanitize_text_field($text);
         $key_identifier = $sandbox_mode
             ? SquareEncryptionKeyManager::SANDBOX_ENCRYPTION_KEY_ID
@@ -711,7 +711,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             return $text;
         }
         // Try decrypting.
-        $encryptor = new SquareOpenSSLEncryption();
+        $encryptor = LoaderFactory::getLoader()->getShared(SquareOpenSSLEncryption::class);
         $key_identifier = $sandbox_mode
             ? SquareEncryptionKeyManager::SANDBOX_ENCRYPTION_KEY_ID
             : SquareEncryptionKeyManager::PRODUCTION_ENCRYPTION_KEY_ID;
