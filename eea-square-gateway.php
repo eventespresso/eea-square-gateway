@@ -1,6 +1,6 @@
 <?php
 /*
-    Plugin Name: Event Espresso - Square Gateway (EE 4.9)
+    Plugin Name: Event Espresso - Square Gateway (EE 4.9+)
     Plugin URI: https://eventespresso.com
     Description: Square is an on-site payment method for Event Espresso for accepting credit and debit cards. An account with Square is required to accept payments.
 
