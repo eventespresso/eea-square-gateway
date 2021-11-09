@@ -280,12 +280,14 @@ jQuery(document).ready(function($) {
 				// Using separate 'try' blocks to give both methods a chance to load.
 				try {
 					// Apple Pay.
+					this.applePayButton.show();
 					this.applePay = await this.initializeApplePay(this.squarePayments);
 				} catch (error) {
 					this.paymentError(error, false);
 				}
 				try {
 					// Google Pay.
+					this.googlePayButton.show();
 					this.googlePay = await this.initializeGooglePay(this.squarePayments);
 				} catch (error) {
 					this.paymentError(error, false);
@@ -313,7 +315,7 @@ jQuery(document).ready(function($) {
 
 		/**
 		 * @function initializeGooglePay
-		 * Initializes the Apple Pay object for Square payments.
+		 * Initializes the Google Pay object for Square payments.
 		 * @param  {object} payments
 		 */
 		this.initializeGooglePay = async function (payments) {
