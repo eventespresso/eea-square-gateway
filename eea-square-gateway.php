@@ -4,7 +4,7 @@
     Plugin URI: https://eventespresso.com
     Description: Square is an on-site payment method for Event Espresso for accepting credit and debit cards. An account with Square is required to accept payments.
 
-    Version: 1.0.0.rc.002
+    Version: 1.0.0.rc.003
 
     Author: Event Espresso
     Author URI: https://eventespresso.com
@@ -24,7 +24,7 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA02110-1301USA
  */
 
-define('EEA_SQUARE_GATEWAY_VERSION', '1.0.0.rc.002');
+define('EEA_SQUARE_GATEWAY_VERSION', '1.0.0.rc.003');
 define('EEA_SQUARE_GATEWAY_PLUGIN_FILE', __FILE__);
 define('EEA_SQUARE_GATEWAY_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
