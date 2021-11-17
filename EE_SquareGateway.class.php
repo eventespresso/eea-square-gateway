@@ -30,7 +30,7 @@ class EE_SquareGateway extends EE_Addon
             'SquareGateway',
             [
                 'version'              => EEA_SQUARE_GATEWAY_VERSION,
-                'min_core_version'     => '4.9.26.rc.000',
+                'min_core_version'     => '4.10.14.rc.001',
                 'main_file_path'       => EEA_SQUARE_GATEWAY_PLUGIN_FILE,
                 'admin_callback'       => 'additionalAdminHooks',
                 'payment_method_paths' => [
