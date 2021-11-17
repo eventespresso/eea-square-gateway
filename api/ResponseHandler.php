@@ -8,7 +8,7 @@ namespace EventEspresso\Square\api;
  *
  * @author  Brent Christensen
  * @package EventEspresso\Square\api
- * @since   $VID:$
+ * @since   1.0.0.p
  */
 class ResponseHandler
 {

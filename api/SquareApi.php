@@ -11,7 +11,7 @@ use EventEspresso\Square\domain\Domain;
  *
  * @author  Nazar Kolivoshka
  * @package EventEspresso\Square\api
- * @since   $VID:$
+ * @since   1.0.0.p
  */
 class SquareApi
 {

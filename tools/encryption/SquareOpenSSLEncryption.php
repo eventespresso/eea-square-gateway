@@ -14,7 +14,7 @@ use Exception;
  *
  * @author  Nazar Kolivoshka
  * @package EventEspresso\Square\tools\encryption
- * @since   $VID:$
+ * @since   1.0.0.p
  */
 class SquareOpenSSLEncryption extends OpenSSLv2
 {

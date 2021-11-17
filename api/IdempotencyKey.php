@@ -8,7 +8,7 @@ namespace EventEspresso\Square\api;
  *
  * @author  Nazar Kolivoshka
  * @package EventEspresso\Square\api
- * @since   $VID:$
+ * @since   1.0.0.p
  */
 class IdempotencyKey
 {

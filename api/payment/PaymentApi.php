@@ -15,7 +15,7 @@ use ReflectionException;
  *
  * @author  Nazar Kolivoshka
  * @package EventEspresso\Square\api\payment
- * @since   $VID:$
+ * @since   1.0.0.p
  */
 class PaymentApi
 {

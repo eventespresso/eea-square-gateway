@@ -229,7 +229,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      * @param mixed      $payment_response
      * @param string     $status
      * @throws EE_Error
-     * @since   $VID:$
+     * @since   1.0.0.p
      */
     private function updateEspressoPayment(EE_Payment $payment, $payment_response, string $status)
     {

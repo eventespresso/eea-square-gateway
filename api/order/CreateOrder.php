@@ -18,7 +18,7 @@ use ReflectionException;
  *
  * @author  Nazar Kolivoshka
  * @package EventEspresso\Square\api\order
- * @since   $VID:$
+ * @since   1.0.0.p
  */
 class CreateOrder extends OrdersApi
 {

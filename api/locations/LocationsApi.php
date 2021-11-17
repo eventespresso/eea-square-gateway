@@ -10,7 +10,7 @@ use EventEspresso\Square\api\SquareApi;
  *
  * @author  Nazar Kolivoshka
  * @package EventEspresso\Square\api\order
- * @since   $VID:$
+ * @since   1.0.0.p
  */
 class LocationsApi
 {

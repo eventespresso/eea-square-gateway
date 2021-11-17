@@ -8,7 +8,7 @@ namespace EventEspresso\Square\api\order;
  *
  * @author  Brent Christensen
  * @package EventEspresso\Square\api\order
- * @since   $VID:$
+ * @since   1.0.0.p
  */
 class OrderItems
 {

@@ -7,7 +7,7 @@ defined('EVENT_ESPRESSO_VERSION') || exit('No direct script access allowed');
  * @package        Event Espresso
  * @subpackage     eea-square-gateway
  * @author         Nazar Kolivoshka
- * @version        $VID:$
+ * @version        1.0.0.p
  */
 class EESquareGatewayTest extends EE_UnitTestCase
 {
