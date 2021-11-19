@@ -4,6 +4,7 @@ namespace EventEspresso\Square\api\payment;
 
 use EE_Error;
 use EE_Payment;
+use EED_SquareOnsite;
 use EEG_SquareOnsite;
 use EventEspresso\Square\api\IdempotencyKey;
 use EventEspresso\Square\api\SquareApi;
@@ -55,12 +56,20 @@ class PaymentApi
      */
     protected $verificationToken = '';
 
+    /**
+     * Payment billing info.
+     *
+     * @var array
+     */
+    protected $billing_info = [];
+
 
     /**
      * CancelOrder constructor.
      *
      * @param EEG_SquareOnsite $gateway
      * @param SquareApi        $api
+     * @param array            $billing_info
      * @param string           $payment_token
      * @param string|null      $verificationToken
      * @param int              $TXN_ID
@@ -68,16 +77,16 @@ class PaymentApi
     public function __construct(
         EEG_SquareOnsite $gateway,
         SquareApi $api,
-        string $payment_token,
-        ?string $verificationToken,
+        array $billing_info,
         int $TXN_ID
     ) {
         $this->api               = $api;
         $this->gateway           = $gateway;
-        $this->payment_token     = $payment_token;
-        $this->verificationToken = $verificationToken ?? '';
+        $this->payment_token     = $billing_info['eea_square_token'];
+        $this->verificationToken = $billing_info['eea_square_sca'] ?? '';
         $this->post_url          = $this->api->apiEndpoint() . 'payments';
         $this->idempotency_key   = new IdempotencyKey($this->api->isSandboxMode(), $TXN_ID);
+        $this->billing_info      = $billing_info;
     }
 
 
@@ -153,17 +162,31 @@ class PaymentApi
      */
     private function buildPaymentBody(EE_Payment $payment, string $order_id): array
     {
-        $keyPrefix = $this->api->isSandboxMode() ? 'TEST-payment' : 'event-payment';
-        $TXN_ID    = $payment->transaction()->ID();
+        $keyPrefix   = $this->api->isSandboxMode() ? 'TEST-payment' : 'event-payment';
+        $TXN_ID      = $payment->transaction()->ID();
+        $country_iso = EED_SquareOnsite::getCountryIsoByName($this->billing_info['country']);
+
+        // form the body parameters
         $payment_body = [
-            'source_id'       => $this->payment_token,
-            'idempotency_key' => $this->idempotency_key->value(),
-            'amount_money'    => [
+            'source_id'           => $this->payment_token,
+            'idempotency_key'     => $this->idempotency_key->value(),
+            'amount_money'        => [
                 'amount'   => $this->gateway->convertToSubunits($payment->amount()),
                 'currency' => $payment->currency_code(),
             ],
-            'location_id'     => $this->api->locationId(),
-            'reference_id'    => "$keyPrefix-$TXN_ID",
+            'location_id'         => $this->api->locationId(),
+            'reference_id'        => "$keyPrefix-$TXN_ID",
+            'buyer_email_address' => $this->billing_info['email'] ?? '',
+            'billing_address'     => [
+                'first_name'     => $this->billing_info['first_name'] ?? '',
+                'last_name'      => $this->billing_info['last_name'] ?? '',
+                'address_line_1' => $this->billing_info['address'] ?? '',
+                'address_line_2' => $this->billing_info['address2'] ?? '',
+                'administrative_district_level_1' => $this->billing_info['state'] ?? '',
+                'locality'       => $this->billing_info['city'] ?? '',
+                'country'        => $country_iso ?? '',
+                'postal_code'    => $this->billing_info['zip'] ?? '',
+            ],
         ];
 
         // Is there a verifications token (SCA) ?

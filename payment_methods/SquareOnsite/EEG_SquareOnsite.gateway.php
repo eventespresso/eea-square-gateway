@@ -134,8 +134,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         return new PaymentApi(
             $this,
             $this->getSquareApi(),
-            $billing_info['eea_square_token'],
-            $billing_info['eea_square_sca'],
+            $billing_info,
             $payment->transaction()->ID()
         );
     }

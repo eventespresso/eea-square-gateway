@@ -112,4 +112,21 @@ class EED_SquareOnsite extends EED_Module
             $CancelOrder->cancel($orderId, $orderVersion);
         }
     }
+
+
+    /**
+     * Gets the country ISO by its name
+     *
+     * @param string $country_name
+     * @return string
+     * @throws EE_Error|ReflectionException
+     */
+    public static function getCountryIsoByName(string $country_name): string
+    {
+        $country_model = EEM_Country::instance();
+        $country = method_exists($country_model, 'get_country_by_name')
+            ? $country_model->get_country_by_name($country_name)
+            : $country_model->get_one([['CNT_name' => $country_name]]);
+        return $country instanceof EE_Country ? $country->get('CNT_ISO') : '';
+    }
 }
