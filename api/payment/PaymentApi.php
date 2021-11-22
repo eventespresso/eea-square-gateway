@@ -70,8 +70,6 @@ class PaymentApi
      * @param EEG_SquareOnsite $gateway
      * @param SquareApi        $api
      * @param array            $billing_info
-     * @param string           $payment_token
-     * @param string|null      $verificationToken
      * @param int              $TXN_ID
      */
     public function __construct(
@@ -82,7 +80,7 @@ class PaymentApi
     ) {
         $this->api               = $api;
         $this->gateway           = $gateway;
-        $this->payment_token     = $billing_info['eea_square_token'];
+        $this->payment_token     = $billing_info['eea_square_token'] ?? '';
         $this->verificationToken = $billing_info['eea_square_sca'] ?? '';
         $this->post_url          = $this->api->apiEndpoint() . 'payments';
         $this->idempotency_key   = new IdempotencyKey($this->api->isSandboxMode(), $TXN_ID);

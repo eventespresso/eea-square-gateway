@@ -124,9 +124,9 @@ class EED_SquareOnsite extends EED_Module
     public static function getCountryIsoByName(string $country_name): string
     {
         $country_model = EEM_Country::instance();
-        $country = method_exists($country_model, 'get_country_by_name')
-            ? $country_model->get_country_by_name($country_name)
+        $country = method_exists($country_model, 'getCountryByName')
+            ? $country_model->getCountryByName($country_name)
             : $country_model->get_one([['CNT_name' => $country_name]]);
-        return $country instanceof EE_Country ? $country->get('CNT_ISO') : '';
+        return $country instanceof EE_Country ? $country->ID() : '';
     }
 }
