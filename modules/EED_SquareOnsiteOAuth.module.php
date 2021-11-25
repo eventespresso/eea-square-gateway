@@ -177,7 +177,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         if (
             array_key_exists('debugMode', $_POST)
             && in_array($_POST['debugMode'], ['0', '1'], true)
-            && (bool) $square->debug_mode() !== (bool) $_POST['debugMode']
+            && $square->debug_mode() !== (bool) $_POST['debugMode']
         ) {
             $square->save(['PMD_debug_mode' => $_POST['debugMode']]);
         }

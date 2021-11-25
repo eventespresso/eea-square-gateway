@@ -57,10 +57,8 @@ class SettingsForm extends EE_Payment_Method_Form
         ];
 
         // Check the Locations list and display the select input.
-        $squareData = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
-        $locationsList = isset($squareData[ Domain::META_KEY_LOCATIONS_LIST ])
-            ? $squareData[ Domain::META_KEY_LOCATIONS_LIST ]
-            : [];
+        $squareData    = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
+        $locationsList = $squareData[ Domain::META_KEY_LOCATIONS_LIST ] ?? [];
         $pmFormParams['extra_meta_inputs'][ Domain::META_KEY_LOCATION_ID ] = new EE_Select_Input(
             $locationsList,
             [
@@ -120,13 +118,11 @@ class SettingsForm extends EE_Payment_Method_Form
     public function validateConnection(EE_Payment_Method $pmInstance)
     {
         // If there is an established connection we should check the debug mode and the connection.
-        $squareData = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
-        $pmDebugMode = $pmInstance->debug_mode();
-        $debugInput = $this->get_input('PMD_debug_mode', false);
+        $squareData      = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
+        $pmDebugMode     = $pmInstance->debug_mode();
+        $debugInput      = $this->get_input('PMD_debug_mode', false);
         $locationsSelect = $this->get_input(Domain::META_KEY_LOCATION_ID, false);
-        $locationsList = isset($squareData[ Domain::META_KEY_LOCATIONS_LIST ])
-            ? $squareData[ Domain::META_KEY_LOCATIONS_LIST ]
-            : false;
+        $locationsList   = $squareData[ Domain::META_KEY_LOCATIONS_LIST ] ?? false;
 
         // Disable the locations select if list is empty.
         if (! $locationsList) {
@@ -228,9 +224,21 @@ class SettingsForm extends EE_Payment_Method_Form
      * @param EE_Payment_Method $pmInstance
      * @return array ['healthy' => true] | ['error' => ['message' => 'the_message', 'code' => 'the_code']]
      */
-    public function oauthHealthCheck(EE_Payment_Method $pmInstance)
+    public function oauthHealthCheck(EE_Payment_Method $pmInstance): array
     {
-        // Request a list of locations.
+        // Double check main oAuth parameters.
+        $access_token = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, '');
+        $app_id       = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true, '');
+        if (! $access_token || ! $app_id) {
+            return [
+                'error' => [
+                    'code'    => 'NO_ACCESS_TOKEN',
+                    'message' => esc_html__('One or more authentication parameters are missing', 'event_espresso')
+                ]
+            ];
+        }
+
+        // Request a list of locations to check API requests.
         $locations = EED_SquareOnsiteOAuth::getMerchantLocations($pmInstance);
         if (is_array($locations) && isset($locations['error'])) {
             switch ($locations['error']['code']) {
@@ -255,7 +263,7 @@ class SettingsForm extends EE_Payment_Method_Form
      * @return boolean
      * @throws ReflectionException
      */
-    public function resetOauthSettings(EE_Payment_Method $pmInstance)
+    public function resetOauthSettings(EE_Payment_Method $pmInstance): bool
     {
         try {
             $pmInstance->delete_extra_meta(Domain::META_KEY_APPLICATION_ID);
