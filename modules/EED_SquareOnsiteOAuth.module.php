@@ -102,15 +102,13 @@ class EED_SquareOnsiteOAuth extends EED_Module
             EED_SquareOnsiteOAuth::closeOauthWindow(esc_html__('Nonce fail!', 'event_espresso'));
         }
         if (
-            ! isset(
-                $_GET['square_slug'],
-                $_GET[ Domain::META_KEY_EXPIRES_AT ],
-                $_GET[ Domain::META_KEY_ACCESS_TOKEN ],
-                $_GET[ Domain::META_KEY_MERCHANT_ID ],
-                $_GET[ Domain::META_KEY_REFRESH_TOKEN ],
-                $_GET[ Domain::META_KEY_APPLICATION_ID ],
-                $_GET[ Domain::META_KEY_LIVE_MODE ]
-            )
+            empty($_GET['square_slug'])
+            || empty($_GET[ Domain::META_KEY_EXPIRES_AT ])
+            || empty($_GET[ Domain::META_KEY_ACCESS_TOKEN ])
+            || empty($_GET[ Domain::META_KEY_MERCHANT_ID ])
+            || empty($_GET[ Domain::META_KEY_REFRESH_TOKEN ])
+            || empty($_GET[ Domain::META_KEY_APPLICATION_ID ])
+            || empty($_GET[ Domain::META_KEY_LIVE_MODE ])
         ) {
             // Missing parameters for some reason. Can't proceed.
             EED_SquareOnsiteOAuth::closeOauthWindow(esc_html__('Missing OAuth required parameters.', 'event_espresso'));
@@ -463,16 +461,14 @@ class EED_SquareOnsiteOAuth extends EED_Module
 
             if (
                 ! wp_verify_nonce($responseBody->nonce, 'eea_square_refresh_access_token')
-                || ! isset(
-                    $responseBody->expires_at,
-                    $responseBody->application_id,
-                    $responseBody->access_token,
-                    $responseBody->refresh_token,
-                    $responseBody->merchant_id
-                )
+                || empty($responseBody->expires_at)
+                || empty($responseBody->application_id)
+                || empty($responseBody->access_token)
+                || empty($responseBody->refresh_token)
+                || empty($responseBody->merchant_id)
             ) {
                 // This is an error.
-                $errMsg = esc_html__('Could not get the refresh token.', 'event_espresso');
+                $errMsg = esc_html__('Could not get the refresh token and/or other parameters.', 'event_espresso');
                 EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, false);
             }
 
@@ -681,10 +677,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @return string|null
      * @throws Exception
      */
-    public static function encryptString($text = '', bool $sandbox_mode): ?string
+    public static function encryptString(string $text, bool $sandbox_mode): ?string
     {
         // We sure we are getting something ?
-        if (! $text || ! is_string($text)) {
+        if (! $text) {
             return $text;
         }
         // Do encrypt.
@@ -704,10 +700,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @param bool   $sandbox_mode
      * @return string|null
      */
-    public static function decryptString($text = '', bool $sandbox_mode): ?string
+    public static function decryptString(string $text, bool $sandbox_mode): ?string
     {
         // Are we even getting something ?
-        if (! $text || ! is_string($text)) {
+        if (! $text) {
             return $text;
         }
         // Try decrypting.
