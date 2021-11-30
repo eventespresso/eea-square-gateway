@@ -106,8 +106,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
             || empty($_GET[ Domain::META_KEY_EXPIRES_AT ])
             || empty($_GET[ Domain::META_KEY_ACCESS_TOKEN ])
             || empty($_GET[ Domain::META_KEY_MERCHANT_ID ])
-            || empty($_GET[ Domain::META_KEY_REFRESH_TOKEN ])
             || empty($_GET[ Domain::META_KEY_APPLICATION_ID ])
+            || ! isset($_GET[ Domain::META_KEY_REFRESH_TOKEN ])
             || ! isset($_GET[ Domain::META_KEY_LIVE_MODE ])
         ) {
             // Missing parameters for some reason. Can't proceed.
