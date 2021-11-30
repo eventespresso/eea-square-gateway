@@ -223,11 +223,12 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
             $this->_pm_instance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, ''),
             $this->_pm_instance->debug_mode()
         );
+
         return [
             'accessToken'       => $access_token,
             'appId'             => $this->_pm_instance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true),
             'locationId'        => $this->_pm_instance->get_extra_meta(Domain::META_KEY_LOCATION_ID, true),
-            'useDigitalWallet'  => $this->_pm_instance->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true),
+            'useDigitalWallet'  => $this->_pm_instance->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true, ''),
             'paymentMethodSlug' => $this->_pm_instance->slug(),
             'paymentCurrency'   => EE_Registry::instance()->CFG->currency->code,
             'payButtonText'     => esc_html__('Pay', 'event_espresso'),
