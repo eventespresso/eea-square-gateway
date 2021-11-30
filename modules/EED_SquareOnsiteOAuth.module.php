@@ -698,9 +698,9 @@ class EED_SquareOnsiteOAuth extends EED_Module
      *
      * @param string $text
      * @param bool   $sandbox_mode
-     * @return string|null
+     * @return string
      */
-    public static function decryptString(string $text, bool $sandbox_mode): ?string
+    public static function decryptString(string $text, bool $sandbox_mode): string
     {
         // Are we even getting something ?
         if (! $text) {
@@ -711,7 +711,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $key_identifier = $sandbox_mode
             ? SquareEncryptionKeyManager::SANDBOX_ENCRYPTION_KEY_ID
             : SquareEncryptionKeyManager::PRODUCTION_ENCRYPTION_KEY_ID;
-        return $encryptor->decrypt($text, $key_identifier);
+        $decrypted = $encryptor->decrypt($text, $key_identifier);
+        return $decrypted ?? '';
     }
 
 
