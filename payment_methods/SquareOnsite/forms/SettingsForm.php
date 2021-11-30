@@ -130,7 +130,9 @@ class SettingsForm extends EE_Payment_Method_Form
         }
 
         if (isset($squareData[ Domain::META_KEY_USING_OAUTH ]) && $squareData[ Domain::META_KEY_USING_OAUTH ]) {
-            // First check the credentials and the API connection
+            // first check the token and refresh if needed
+            EED_SquareOnsiteOAuth::checkAndRefreshToken($pmInstance);
+            // check the credentials and the API connection
             $oauthHealthCheck = $this->oauthHealthCheck($pmInstance);
             // and reset the OAuth connection in case we are no longer authorized for some reason.
             if (isset($oauthHealthCheck['error'])) {

@@ -102,9 +102,6 @@ class OAuthForm extends EE_Form_Section_Proper
      */
     protected function oauthFormContents()
     {
-        // Check the token and refresh if needed.
-        EED_SquareOnsiteOAuth::checkAndRefreshToken($this->thePmInstance);
-
         // The contents.
         $subsections = [];
         $fieldHeading = EEH_HTML::th(

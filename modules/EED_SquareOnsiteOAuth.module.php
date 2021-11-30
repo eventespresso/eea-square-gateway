@@ -604,8 +604,9 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @return boolean
      * @throws EE_Error
      * @throws ReflectionException
+     * @throws Exception
      */
-    public static function checkAndRefreshToken($squarePm)
+    public static function checkAndRefreshToken($squarePm): bool
     {
         // Check if OAuthed first.
         if (EED_SquareOnsiteOAuth::isAuthenticated($squarePm)) {
@@ -653,14 +654,18 @@ class EED_SquareOnsiteOAuth extends EED_Module
         if (! $squarePm) {
             return false;
         }
-        $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
-        $accessToken = EED_SquareOnsiteOAuth::decryptString(
-            $squarePm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, ''),
-            $squarePm->debug_mode()
-        );
+        // access token ok ?
+        $access_token = $squarePm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, '');
+        $square_data  = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
+        if (! $access_token || ! $square_data) {
+            return false;
+        }
+
+        // now check if we can decrypt the token etc.
+        $accessToken = EED_SquareOnsiteOAuth::decryptString($access_token, $squarePm->debug_mode());
         if (
-            isset($squareData[ Domain::META_KEY_USING_OAUTH ])
-            && $squareData[ Domain::META_KEY_USING_OAUTH ]
+            isset($square_data[ Domain::META_KEY_USING_OAUTH ])
+            && $square_data[ Domain::META_KEY_USING_OAUTH ]
             && ! empty($accessToken)
         ) {
             return true;
