@@ -108,7 +108,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             || empty($_GET[ Domain::META_KEY_MERCHANT_ID ])
             || empty($_GET[ Domain::META_KEY_REFRESH_TOKEN ])
             || empty($_GET[ Domain::META_KEY_APPLICATION_ID ])
-            || empty($_GET[ Domain::META_KEY_LIVE_MODE ])
+            || ! isset($_GET[ Domain::META_KEY_LIVE_MODE ])
         ) {
             // Missing parameters for some reason. Can't proceed.
             EED_SquareOnsiteOAuth::closeOauthWindow(esc_html__('Missing OAuth required parameters.', 'event_espresso'));
@@ -143,7 +143,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 Domain::META_KEY_REFRESH_TOKEN => $refresh_token,
                 Domain::META_KEY_EXPIRES_AT    => sanitize_key($_GET[ Domain::META_KEY_EXPIRES_AT ]),
                 Domain::META_KEY_MERCHANT_ID   => sanitize_text_field($_GET[ Domain::META_KEY_MERCHANT_ID ]),
-                Domain::META_KEY_LIVE_MODE     => sanitize_key($_GET[ Domain::META_KEY_LIVE_MODE ]),
+                Domain::META_KEY_LIVE_MODE     => (bool) sanitize_key($_GET[ Domain::META_KEY_LIVE_MODE ]),
                 Domain::META_KEY_USING_OAUTH   => true,
                 Domain::META_KEY_THROTTLE_TIME => date("Y-m-d H:i:s"),
             ]
