@@ -94,9 +94,15 @@ class EED_SquareOnsite extends EED_Module
         $orderId      = $transaction->get_extra_meta('order_id', true, false);
         $orderVersion = $transaction->get_extra_meta('order_version', true, false);
         $pmSettings   = $paymentMethod->settings_array();
-        if ($orderId && isset($pmSettings[ Domain::META_KEY_ACCESS_TOKEN ])) {
-            $SquareApi = new SquareApi(
+        $access_token = ! empty($pmSettings[ Domain::META_KEY_ACCESS_TOKEN ])
+            ? EED_SquareOnsiteOAuth::decryptString(
                 $pmSettings[ Domain::META_KEY_ACCESS_TOKEN ],
+                $pmSettings['debug_mode']
+            )
+            : false;
+        if ($orderId && $access_token) {
+            $SquareApi = new SquareApi(
+                $access_token,
                 $pmSettings[ Domain::META_KEY_APPLICATION_ID ],
                 $pmSettings[ Domain::META_KEY_USE_DIGITAL_WALLET ],
                 $pmSettings['debug_mode'],
