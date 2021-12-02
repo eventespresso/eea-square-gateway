@@ -68,6 +68,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
             add_action('wp_ajax_squareUpdateConnectionStatus', [__CLASS__, 'updateConnectionStatus']);
             // Square disconnect.
             add_action('wp_ajax_squareRequestDisconnect', [__CLASS__, 'disconnectAccount']);
+            // register domain with Apple Pay
+            add_action('wp_ajax_squareRegisterDomain', [__CLASS__, 'registerDomain']);
         }
     }
 
@@ -403,6 +405,89 @@ class EED_SquareOnsiteOAuth extends EED_Module
 
         echo wp_json_encode([
             'squareSuccess' => true,
+        ]);
+        exit();
+    }
+
+
+    /**
+     * Register the validated (clients) domain with Apple Pay.
+     *
+     * @return void
+     * @throws InvalidArgumentException
+     * @throws InvalidInterfaceException
+     * @throws InvalidDataTypeException
+     * @throws EE_Error|ReflectionException
+     */
+    public static function registerDomain()
+    {
+        $squarePm = EED_SquareOnsiteOAuth::getSubmittedPm($_POST);
+        if (! $squarePm) {
+            $errMsg = esc_html__('Could not specify the payment method.', 'event_espresso');
+            EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg);
+        }
+        $squareData  = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
+        $accessToken = $squarePm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
+        $accessToken = EED_SquareOnsiteOAuth::decryptString($accessToken, $squarePm->debug_mode());
+        if (! isset($squareData[ Domain::META_KEY_MERCHANT_ID ]) || ! $squareData[ Domain::META_KEY_MERCHANT_ID ]) {
+            echo wp_json_encode(
+                [
+                    'squareError' => esc_html__('Could not specify the connected merchant.', 'event_espresso'),
+                    'alert'       => true,
+                ]
+            );
+            exit();
+        }
+        // Tell Square that the account has been disconnected.
+        $postParameters = [
+            'method'      => 'POST',
+            'timeout'     => 60,
+            'redirection' => 5,
+            'blocking'    => true,
+            'headers'     => [
+                'Square-Version' => Domain::SQUARE_API_VERSION,
+                'Authorization'  => 'Bearer ' . $accessToken,
+                'Content-Type'   => 'application/json',
+            ],
+            'body' => json_encode(['domain_name' => preg_replace('#^https?://#i', '', get_site_url())]),
+        ];
+        if (defined('LOCAL_MIDDLEMAN_SERVER')) {
+            $postParameters['sslverify'] = false;
+        }
+        $postUrl = 'https://connect.squareupsandbox.com/v2/apple-pay/domains';
+        // register the domain
+        $response = wp_remote_post($postUrl, $postParameters);
+        $squarePm->type_obj()->get_gateway()->log(
+            ['Apple Pay domain registration' => json_encode($response)],
+            'Payment_Method'
+        );
+        if (is_wp_error($response)) {
+            EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $response->get_error_message(), true, true);
+        } else {
+            $responseBody = (isset($response['body']) && $response['body']) ? json_decode($response['body']) : false;
+            // For any error (besides already being disconnected), give an error response.
+            if (
+                $responseBody === false
+                || (
+                    isset($responseBody->error)
+                    && strpos($responseBody->error_description, 'This application is not connected') === false
+                )
+            ) {
+                if (isset($responseBody->error_description)) {
+                    $errMsg = $responseBody->error_description;
+                } else {
+                    $errMsg = esc_html__('Unknown response received!', 'event_espresso');
+                }
+                EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, true, true);
+            }
+            // should be good
+            echo wp_json_encode([
+                'status' => $responseBody->status,
+            ]);
+            exit();
+        }
+        echo wp_json_encode([
+            'status' => 'should not be getting this',
         ]);
         exit();
     }

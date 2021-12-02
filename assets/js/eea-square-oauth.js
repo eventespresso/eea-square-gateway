@@ -17,6 +17,8 @@ jQuery(document).ready(function($) {
 	 *	debugModeInput: object,
 	 *	submittedPm: string,
 	 *	debugMode: string,
+	 *	registerDomainBtn: object,
+	 *	registerDomainBtnId: string,
 	 * }}
 	 *
 	 * @namespace eeaSquareOAuthParameters
@@ -44,10 +46,12 @@ jQuery(document).ready(function($) {
 		this.initialized = false;
 		this.connectBtn = {};
 		this.disconnectBtn = {};
+		this.registerDomainBtn = {};
 		this.form = {};
 		this.connectBtnId = '#eea_square_connect_btn_' + this.slug;
 		this.disconnectBtnId = '#eea_square_disconnect_btn_' + this.slug;
 		this.connectSectionId = '#eea_square_oauth_section_' + this.slug;
+		this.registerDomainBtnId = '#eea_apple_register_domain_' + this.slug;
 		this.useDwalletId = '#' + this.slug + '-use-dwallet';
 		this.connectSection = 'eea-connect-section-' + this.slug;
 		this.disconnectSection = 'eea-disconnect-section-' + this.slug;
@@ -90,6 +94,7 @@ jQuery(document).ready(function($) {
 		this.initializeObjects = function() {
 			this.connectBtn = $(this.connectBtnId);
 			this.disconnectBtn = $(this.disconnectBtnId);
+			this.registerDomainBtn = $(this.registerDomainBtnId);
 			this.form = $(this.formId);
 			this.debugModeInput = this.form.closest('form').find('select[name*='+this.slug+'][name*=PMD_debug_mode]');
 		};
@@ -206,6 +211,42 @@ jQuery(document).ready(function($) {
 					);
 					squarePmInstance.debugMode = squarePmInstance.debugModeInput[0].value;
 					squarePmInstance.oauthSendRequest('squareRequestDisconnect');
+				} else {
+					console.error(squareParams.unknownContainer);
+				}
+			});
+
+			$(this.registerDomainBtnId).on('click', function(event) {
+				event.preventDefault();
+				const buttonContainer = $(this).closest('tr');
+				const submittingForm = $(this).parents('form:first')[0];
+				if (buttonContainer && submittingForm) {
+					squarePmInstance.submittedPm = 'squareonsite';
+					squarePmInstance.debugMode = squarePmInstance.debugModeInput[0].value;
+					const requestData = {
+						action: 'squareRegisterDomain',
+						submittedPm: squarePmInstance.submittedPm,
+						debugMode: squarePmInstance.debugMode
+					};
+					$.ajax({
+						type: 'POST',
+						url: eei18n.ajax_url,
+						data: requestData,
+						dataType: 'json',
+						beforeSend: function() {
+							window.do_before_admin_page_ajax();
+						},
+						success: function(response) {
+							$('#' + squarePmInstance.processingIconName).fadeOut('fast');
+							console.log('--- OK', response);
+							alert(response.status);
+						},
+						error: function(response, error, description) {
+							$('#' + squarePmInstance.processingIconName).fadeOut('fast');
+							console.log('--- error', description);
+							alert(description);
+						}
+					});
 				} else {
 					console.error(squareParams.unknownContainer);
 				}
