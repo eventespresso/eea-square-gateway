@@ -49,18 +49,23 @@ class SettingsForm extends EE_Payment_Method_Form
         $this->squareData     = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true, []);
         $this->locations_list = $this->squareData[ Domain::META_KEY_LOCATIONS_LIST ] ?? [];
 
-        // Fields for basic authentication settings.
-        $this->addDigitalWalletToggle($paymentMethod, $pmInstance);
-        // add the domain registering button
-        $this->addRegisterDomainButton($paymentMethod, $pmInstance);
-        // add the Locations select input
-        $this->addLocationsList($paymentMethod, $pmInstance);
-
         // Build the PM form.
         parent::__construct();
 
-        // Now add the OAuth section.
+        // Validate connection first.
+        $this->validateConnection($pmInstance);
+
+        // add the OAuth section
         $this->addSquareConnectButton($paymentMethod, $pmInstance);
+        // add the Locations select input
+        $this->addLocationsList($paymentMethod, $pmInstance);
+        // fields for basic authentication settings
+        $this->addDigitalWalletToggle($paymentMethod, $pmInstance);
+        // add the domain registering button
+        $this->addRegisterDomainButton($paymentMethod, $pmInstance);
+
+        // Disable inputs if needed
+        $this->toggleSubsections($pmInstance);
     }
 
 
@@ -74,9 +79,6 @@ class SettingsForm extends EE_Payment_Method_Form
      */
     public function addSquareConnectButton(EE_PMT_SquareOnsite $paymentMethod, EE_Payment_Method $pmInstance)
     {
-        // Validate connection first.
-        $this->validateConnection($pmInstance);
-
         // Add the connect button before the app id field.
         $oauthTemplate = new OAuthForm($paymentMethod, $pmInstance);
         $this->add_subsections(
@@ -101,12 +103,6 @@ class SettingsForm extends EE_Payment_Method_Form
         // If there is an established connection we should check the debug mode and the connection.
         $pmDebugMode     = $pmInstance->debug_mode();
         $debugInput      = $this->get_input('PMD_debug_mode', false);
-        $locationsSelect = $this->get_input(Domain::META_KEY_LOCATION_ID, false);
-
-        // Disable the locations select if list is empty.
-        if (! $this->locations_list) {
-            $locationsSelect->disable();
-        }
 
         if (isset($this->squareData[ Domain::META_KEY_USING_OAUTH ])
             && $this->squareData[ Domain::META_KEY_USING_OAUTH ]
@@ -305,7 +301,7 @@ class SettingsForm extends EE_Payment_Method_Form
                     ]
                 ),
             ],
-            'square_oauth',
+            Domain::META_KEY_LOCATION_ID,
             false
         );
     }
@@ -325,7 +321,7 @@ class SettingsForm extends EE_Payment_Method_Form
     ) {
         $this->add_subsections(
             [
-                'register_domain' => new EE_Button_Input([
+                Domain::META_KEY_REG_DOMAIN_BUTTON => new EE_Button_Input([
                     'button_content'  => esc_html__('Register my site Domain', 'event_espresso'),
                     'html_label_text' => sprintf(
                         esc_html__('Apple Pay Domain %s', 'event_espresso'),
@@ -380,9 +376,32 @@ class SettingsForm extends EE_Payment_Method_Form
                     ]
                 ),
             ],
-            'register_domain',
+            'square_oauth',
             false
         );
 
+    }
+
+
+    /**
+     * Toggles subsections depending on the OAuth status etc.
+     *
+     * @param EE_Payment_Method $pmInstance
+     * @return void
+     * @throws EE_Error|ReflectionException
+     */
+    private function toggleSubsections(EE_Payment_Method $pmInstance)
+    {
+        // Disable the locations select if list is empty.
+        $locationsSelect = $this->get_input(Domain::META_KEY_LOCATION_ID, false);
+        if (! $this->locations_list) {
+            $locationsSelect->disable();
+        }
+
+        // disable domain registration button if digital wallet not enabled
+        $use_digital_wallet = $pmInstance->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true, false);
+        if (! $use_digital_wallet) {
+            $this->exclude([ Domain::META_KEY_REG_DOMAIN_BUTTON ]);
+        }
     }
 }

@@ -79,4 +79,9 @@ class Domain
      * Holds the Square API version used in this integration.
      */
     public const SQUARE_API_VERSION = '2021-05-13';
+
+    /*
+     * Holds the name of the Register Domain button.
+     */
+    public const META_KEY_REG_DOMAIN_BUTTON = 'register_domain';
 }
