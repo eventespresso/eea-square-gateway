@@ -31,6 +31,13 @@ class SettingsForm extends EE_Payment_Method_Form
     protected array $squareData = [];
 
     /**
+     *  The list of locations.
+     *
+     * @var array
+     */
+    protected array $locations_list = [];
+
+    /**
      * Class constructor.
      *
      * @param  EE_PMT_SquareOnsite $paymentMethod
@@ -39,55 +46,18 @@ class SettingsForm extends EE_Payment_Method_Form
      */
     public function __construct(EE_PMT_SquareOnsite $paymentMethod, EE_Payment_Method $pmInstance)
     {
-        $this->squareData = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true, []);
+        $this->squareData     = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true, []);
+        $this->locations_list = $this->squareData[ Domain::META_KEY_LOCATIONS_LIST ] ?? [];
+
         // Fields for basic authentication settings.
-        $pmFormParams = [
-            'extra_meta_inputs' => [
-                Domain::META_KEY_USE_DIGITAL_WALLET => new EE_Yes_No_Input(
-                    [
-                        'html_label_text' => sprintf(
-                            // translators: %1$s: Help tab link as icon.
-                            esc_html__('Enable Digital Wallet ? %s', 'event_espresso'),
-                            $paymentMethod->get_help_tab_link()
-                        ),
-                        'html_help_text'  => esc_html__(
-                            // @codingStandardsIgnoreStart
-                            'Would you like to enable Google Pay and Apple Pay as payment options on the checkout page ?',
-                            // @codingStandardsIgnoreEnd
-                            'event_espresso'
-                        ),
-                        'html_id'         => $pmInstance->slug() . '-use-dwallet',
-                        'default'         => false,
-                        'required'        => true,
-                    ]
-                ),
-            ]
-        ];
-
+        $this->addDigitalWalletToggle($paymentMethod, $pmInstance);
         // add the domain registering button
-        $pmFormParams = $this->addRegisterDomainButton($pmFormParams, $paymentMethod, $pmInstance);
-
-        // Check the Locations list and display the select input.
-        $locationsList = $this->squareData[ Domain::META_KEY_LOCATIONS_LIST ] ?? [];
-        $pmFormParams['extra_meta_inputs'][ Domain::META_KEY_LOCATION_ID ] = new EE_Select_Input(
-            $locationsList,
-            [
-                'html_label_text' => sprintf(
-                    esc_html__('Merchant Location %s', 'event_espresso'),
-                    $paymentMethod->get_help_tab_link()
-                ),
-                'html_help_text'  => esc_html__(
-                    'Select the location you want your payments to be associated with.',
-                    'event_espresso'
-                ),
-                'html_class'      => 'eea-locations-select-' . $pmInstance->slug(),
-                'default'         => 'main',
-                'required'        => true,
-            ]
-        );
+        $this->addRegisterDomainButton($paymentMethod, $pmInstance);
+        // add the Locations select input
+        $this->addLocationsList($paymentMethod, $pmInstance);
 
         // Build the PM form.
-        parent::__construct($pmFormParams);
+        parent::__construct();
 
         // Now add the OAuth section.
         $this->addSquareConnectButton($paymentMethod, $pmInstance);
@@ -113,7 +83,8 @@ class SettingsForm extends EE_Payment_Method_Form
             [
                 'square_oauth' => new EE_Form_Section_HTML($oauthTemplate->get_html_and_js()),
             ],
-            Domain::META_KEY_USE_DIGITAL_WALLET
+            'PMD_debug_mode',
+            false
         );
     }
 
@@ -131,10 +102,9 @@ class SettingsForm extends EE_Payment_Method_Form
         $pmDebugMode     = $pmInstance->debug_mode();
         $debugInput      = $this->get_input('PMD_debug_mode', false);
         $locationsSelect = $this->get_input(Domain::META_KEY_LOCATION_ID, false);
-        $locationsList   = $this->squareData[ Domain::META_KEY_LOCATIONS_LIST ] ?? false;
 
         // Disable the locations select if list is empty.
-        if (! $locationsList) {
+        if (! $this->locations_list) {
             $locationsSelect->disable();
         }
 
@@ -305,33 +275,114 @@ class SettingsForm extends EE_Payment_Method_Form
 
 
     /**
-     * Adds a subsection with a Register Domain button.
+     * Adds a subsection with a Digital Wallet yes/no input.
      *
-     * @param array               $pmFormParams
      * @param EE_PMT_SquareOnsite $paymentMethod
      * @param EE_Payment_Method   $pmInstance
-     * @return array
+     * @return void
+     * @throws EE_Error
      */
-    private function addRegisterDomainButton(
-        array $pmFormParams,
+    private function addDigitalWalletToggle(
         EE_PMT_SquareOnsite $paymentMethod,
         EE_Payment_Method $pmInstance
-    ): array {
-        $pmFormParams['extra_meta_inputs'][ 'register_domain' ] = new EE_Button_Input(
+    ) {
+        $this->add_subsections(
             [
-                'button_content'  => esc_html__('Register my site Domain', 'event_espresso'),
-                'html_label_text' => sprintf(
-                    esc_html__('Apple Pay Domain %s', 'event_espresso'),
-                    $paymentMethod->get_help_tab_link()
+                Domain::META_KEY_USE_DIGITAL_WALLET => new EE_Yes_No_Input(
+                    [
+                        'html_label_text' => sprintf(
+                            // translators: %1$s: Help tab link as icon.
+                            esc_html__('Enable Digital Wallet ? %s', 'event_espresso'),
+                            $paymentMethod->get_help_tab_link()
+                        ),
+                        'html_help_text'  => esc_html__(
+                            'Would you like to enable Google Pay and Apple Pay as payment options on the checkout page ?',
+                            'event_espresso'
+                        ),
+                        'html_id'         => $pmInstance->slug() . '-use-dwallet',
+                        'default'         => false,
+                        'required'        => true,
+                    ]
                 ),
-                'html_help_text'  => esc_html__(
-                    'To use apple pay on your own website, you need to register your validated domain with our app.',
-                    'event_espresso'
+            ],
+            'square_oauth',
+            false
+        );
+    }
+
+
+    /**
+     * Adds a subsection with a Register Domain button.
+     *
+     * @param EE_PMT_SquareOnsite $paymentMethod
+     * @param EE_Payment_Method   $pmInstance
+     * @return void
+     * @throws EE_Error
+     */
+    private function addRegisterDomainButton(
+        EE_PMT_SquareOnsite $paymentMethod,
+        EE_Payment_Method $pmInstance
+    ) {
+        $this->add_subsections(
+            [
+                'register_domain' => new EE_Button_Input([
+                    'button_content'  => esc_html__('Register my site Domain', 'event_espresso'),
+                    'html_label_text' => sprintf(
+                        esc_html__('Apple Pay Domain %s', 'event_espresso'),
+                        $paymentMethod->get_help_tab_link()
+                    ),
+                    'html_help_text'  => sprintf(
+                        esc_html__(
+                            'To use Apple pay on your website, you need to register your %1$sverified domain%2$s with our app.',
+                            'event_espresso'
+                        ),
+                        '<a href="https://developer.squareup.com/docs/web-payments/apple-pay#step-1-register-your-sandbox-domain-with-apple" target="_blank">',
+                        '</a>'
+                    ),
+                    'html_id'         => 'eea_apple_register_domain_' . $pmInstance->slug(),
+                    'html_class'      => 'eea-register-domain-btn',
+                ]),
+            ],
+            Domain::META_KEY_USE_DIGITAL_WALLET,
+            false
+        );
+    }
+
+
+    /**
+     * Adds a subsection with a dropdown of a list of locations.
+     *
+     * @param EE_PMT_SquareOnsite $paymentMethod
+     * @param EE_Payment_Method   $pmInstance
+     * @return void
+     * @throws EE_Error
+     */
+    private function addLocationsList(
+        EE_PMT_SquareOnsite $paymentMethod,
+        EE_Payment_Method $pmInstance
+    ) {
+        $this->add_subsections(
+            [
+                Domain::META_KEY_LOCATION_ID => new EE_Select_Input(
+                    $this->locations_list,
+                    [
+                        'html_label_text' => sprintf(
+                            esc_html__('Merchant Location %s', 'event_espresso'),
+                            $paymentMethod->get_help_tab_link()
+                        ),
+                        'html_help_text'  => esc_html__(
+                            'Select the location you want your payments to be associated with.',
+                            'event_espresso'
+                        ),
+                        'html_class'      => 'eea-locations-select-' . $pmInstance->slug(),
+                        'default'         => 'main',
+                        'required'        => true,
+                    ]
                 ),
-                'html_id'         => 'eea_apple_register_domain_' . $pmInstance->slug(),
-            ]
+            ],
+            'register_domain',
+            false
         );
 
-        return $pmFormParams;
     }
 }
