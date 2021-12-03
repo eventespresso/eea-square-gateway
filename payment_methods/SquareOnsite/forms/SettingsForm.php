@@ -46,7 +46,7 @@ class SettingsForm extends EE_Payment_Method_Form
      */
     public function __construct(EE_PMT_SquareOnsite $paymentMethod, EE_Payment_Method $pmInstance)
     {
-        $pmFormParams = [];
+        $pmFormParams         = [];
         $this->squareData     = $pmInstance->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true, []);
         $this->locations_list = $this->squareData[ Domain::META_KEY_LOCATIONS_LIST ] ?? [];
 
@@ -74,8 +74,8 @@ class SettingsForm extends EE_Payment_Method_Form
     /**
      *  Add the connect button to the PM settings page.
      *
-     * @param  EE_PMT_SquareOnsite    $paymentMethod
-     * @param  EE_Payment_Method      $pmInstance
+     * @param  EE_PMT_SquareOnsite $paymentMethod
+     * @param  EE_Payment_Method   $pmInstance
      * @return void
      * @throws EE_Error|ReflectionException
      */
@@ -320,10 +320,7 @@ class SettingsForm extends EE_Payment_Method_Form
     ): array {
         $pmFormParams['extra_meta_inputs'][ Domain::META_KEY_REG_DOMAIN_BUTTON ] = new EE_Button_Input([
             'button_content'  => esc_html__('Register my site Domain', 'event_espresso'),
-            'html_label_text' => sprintf(
-                esc_html__('Apple Pay Domain %s', 'event_espresso'),
-                $paymentMethod->get_help_tab_link()
-            ),
+            'html_label_text' => esc_html__('Apple Pay Domain', 'event_espresso'),
             'html_help_text'  => sprintf(
                 esc_html__(
                     'To use Apple pay on your website, you need to register your %1$sverified domain%2$s with our app.',
@@ -387,10 +384,37 @@ class SettingsForm extends EE_Payment_Method_Form
             $locationsSelect->disable();
         }
 
-        // disable domain registration button if digital wallet not enabled
         $use_digital_wallet = $pmInstance->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true, false);
-        if (! $use_digital_wallet) {
+        // try registering this domain name with Apple Pay if Dwallet enabled
+        if ($use_digital_wallet) {
+            $this->registerBlogDomain($pmInstance);
+        }
+
+        // disable domain registration button if digital wallet not enabled
+        $using_oauth = $this->squareData[ Domain::META_KEY_USING_OAUTH ];
+        $domain_verified = ! empty($this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ])
+            ? $this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ]
+            : 'unknown';
+
+        if (! $using_oauth || ! $use_digital_wallet || $domain_verified === 'VERIFIED') {
             $this->exclude([ Domain::META_KEY_REG_DOMAIN_BUTTON ]);
+        }
+    }
+
+
+    /**
+     * Checks and then registers this website domain name with EE App.
+     *
+     * @param EE_Payment_Method $pmInstance
+     * @return void
+     */
+    private function registerBlogDomain(EE_Payment_Method $pmInstance)
+    {
+        $response = EED_SquareOnsiteOAuth::registerDomain($pmInstance);
+        if (! empty($response['status'])) {
+            // save the status
+            $this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ] = $response['status'];
+            $pmInstance->update_extra_meta(Domain::META_KEY_SQUARE_DATA, $this->squareData);
         }
     }
 }

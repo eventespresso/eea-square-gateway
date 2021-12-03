@@ -1,6 +1,7 @@
 <?php
 
 use EventEspresso\core\services\loaders\LoaderFactory;
+use EventEspresso\Square\api\domains\DomainsApi;
 use EventEspresso\Square\api\locations\LocationsApi;
 use EventEspresso\Square\api\SquareApi;
 use EventEspresso\Square\domain\Domain;
@@ -69,7 +70,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             // Square disconnect.
             add_action('wp_ajax_squareRequestDisconnect', [__CLASS__, 'disconnectAccount']);
             // register domain with Apple Pay
-            add_action('wp_ajax_squareRegisterDomain', [__CLASS__, 'registerDomain']);
+            add_action('wp_ajax_squareRegisterDomain', [__CLASS__, 'registerDomainAjax']);
         }
     }
 
@@ -411,85 +412,79 @@ class EED_SquareOnsiteOAuth extends EED_Module
 
 
     /**
-     * Register the validated (clients) domain with Apple Pay.
+     * Register the validated (clients) domain with Apple Pay. Ajax call.
      *
      * @return void
      * @throws InvalidArgumentException
      * @throws InvalidInterfaceException
      * @throws InvalidDataTypeException
+     * @throws EE_Error
+     * @throws ReflectionException
+     */
+    public static function registerDomainAjax()
+    {
+        $square_pm = EED_SquareOnsiteOAuth::getSubmittedPm($_POST);
+        if (! $square_pm) {
+            $err_msg = esc_html__('Could not specify the payment method.', 'event_espresso');
+            EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $err_msg);
+        }
+
+        $response = EED_SquareOnsiteOAuth::registerDomain($square_pm);
+        if (! empty($response['error'])) {
+            // did we get an error ?
+            EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $response['error'], true, true);
+        } elseif (empty($response['status'])) {
+            $error = esc_html__('Sorry, something went wrong. Got a bad response.', 'event_espresso');
+            EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $error, true, true);
+        }
+        // if we got here, all should be good
+        echo wp_json_encode($response);
+        exit();
+    }
+
+
+    /**
+     * Register the validated (clients) domain with Apple Pay.
+     *
+     * @param EE_Payment_Method $square_pm
+     * @return array
      * @throws EE_Error|ReflectionException
      */
-    public static function registerDomain()
+    public static function registerDomain(EE_Payment_Method $square_pm): array
     {
-        $squarePm = EED_SquareOnsiteOAuth::getSubmittedPm($_POST);
-        if (! $squarePm) {
-            $errMsg = esc_html__('Could not specify the payment method.', 'event_espresso');
-            EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg);
+        $response     = [];
+        $app_id  = $square_pm->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true);
+        $access_token = EED_SquareOnsiteOAuth::decryptString(
+            $square_pm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, ''),
+            $square_pm->debug_mode()
+        );
+        $use_dw = $square_pm->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true, false);
+        if (! $access_token || ! $app_id) {
+            return ['error' => esc_html__('Missing required OAuth information.', 'event_espresso')];
         }
-        $squareData  = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
-        $accessToken = $squarePm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true);
-        $accessToken = EED_SquareOnsiteOAuth::decryptString($accessToken, $squarePm->debug_mode());
-        if (! isset($squareData[ Domain::META_KEY_MERCHANT_ID ]) || ! $squareData[ Domain::META_KEY_MERCHANT_ID ]) {
-            echo wp_json_encode(
-                [
-                    'squareError' => esc_html__('Could not specify the connected merchant.', 'event_espresso'),
-                    'alert'       => true,
-                ]
-            );
-            exit();
-        }
-        // Tell Square that the account has been disconnected.
-        $postParameters = [
-            'method'      => 'POST',
-            'timeout'     => 60,
-            'redirection' => 5,
-            'blocking'    => true,
-            'headers'     => [
-                'Square-Version' => Domain::SQUARE_API_VERSION,
-                'Authorization'  => 'Bearer ' . $accessToken,
-                'Content-Type'   => 'application/json',
-            ],
-            'body' => json_encode(['domain_name' => preg_replace('#^https?://#i', '', get_site_url())]),
-        ];
-        if (defined('LOCAL_MIDDLEMAN_SERVER')) {
-            $postParameters['sslverify'] = false;
-        }
-        $postUrl = 'https://connect.squareupsandbox.com/v2/apple-pay/domains';
+
         // register the domain
-        $response = wp_remote_post($postUrl, $postParameters);
-        $squarePm->type_obj()->get_gateway()->log(
-            ['Apple Pay domain registration' => json_encode($response)],
+        $square_api   = new SquareApi($access_token, $app_id, $use_dw, $square_pm->debug_mode());
+        $domains_api  = new DomainsApi($square_api);
+        $api_response = $domains_api->registerDomain(preg_replace('#^https?://#i', '', get_site_url()));
+        // log
+        $square_pm->type_obj()->get_gateway()->log(
+            ['Domain registration' => json_encode($api_response)],
             'Payment_Method'
         );
-        if (is_wp_error($response)) {
-            EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $response->get_error_message(), true, true);
+        if (is_wp_error($api_response)) {
+            return ['error' => $api_response->get_error_message()];
         } else {
-            $responseBody = (isset($response['body']) && $response['body']) ? json_decode($response['body']) : false;
-            // For any error (besides already being disconnected), give an error response.
-            if (
-                $responseBody === false
-                || (
-                    isset($responseBody->error)
-                    && strpos($responseBody->error_description, 'This application is not connected') === false
-                )
-            ) {
-                if (isset($responseBody->error_description)) {
-                    $errMsg = $responseBody->error_description;
-                } else {
-                    $errMsg = esc_html__('Unknown response received!', 'event_espresso');
-                }
-                EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, true, true);
+            if (! empty($api_response['error'])) {
+                $err_msg = ! empty($api_response['error']['message'])
+                    ? $api_response['error']['message']
+                    : esc_html__('Unknown response received!', 'event_espresso');
+                return ['error' => $err_msg];
             }
             // should be good
-            echo wp_json_encode([
-                'status' => $responseBody->status,
-            ]);
-            exit();
+            $response['status'] = ! empty($api_response['status']) ? $api_response['status'] : 'unknown';
         }
-        echo wp_json_encode([
-            'status' => 'should not be getting this',
-        ]);
-        exit();
+        return $response;
     }
 
 

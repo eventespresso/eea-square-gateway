@@ -1,6 +1,6 @@
 <?php
 
-namespace EventEspresso\Square\api\locations;
+namespace EventEspresso\Square\api\domains;
 
 use EventEspresso\Square\api\SquareApi;
 
@@ -9,21 +9,21 @@ use EventEspresso\Square\api\SquareApi;
  * handles Square Locations API calls
  *
  * @author  Nazar Kolivoshka
- * @package EventEspresso\Square\api\locations
- * @since   1.0.0.p
+ * @package EventEspresso\Square\api\domains
+ * @since   $VID:$
  */
-class LocationsApi
+class DomainsApi
 {
-
     /**
      * @var SquareApi
      */
-    protected $api;
+    protected SquareApi $api;
 
     /**
      * @var string
      */
-    protected $post_url;
+    protected string $request_url;
+
 
     /**
      * CancelOrder constructor.
@@ -32,32 +32,33 @@ class LocationsApi
      */
     public function __construct(SquareApi $api)
     {
-        $this->api      = $api;
-        $this->post_url = $this->api->apiEndpoint() . 'locations';
+        $this->api         = $api;
+        $this->request_url = $this->api->apiEndpoint() . 'apple-pay/domains';
     }
 
 
     /**
-     * Request a list of Locations for the merchant.
+     * Send a domain registration request.
      *
-     * @return Object|array
+     * @param string $domain_name
+     * @return array
      */
-    public function listLocations()
+    public function registerDomain(string $domain_name): array
     {
         // Submit the GET request.
-        $response = $this->api->sendRequest([], $this->post_url, 'GET');
+        $response = $this->api->sendRequest(['domain_name' => $domain_name], $this->request_url);
         // If it's an array - it's an error. So pass that further.
         if (is_array($response) && isset($response['error'])) {
             return $response;
         }
-        if (! isset($response->locations)) {
+        if (! isset($response->status)) {
             $request_error['error']['message'] = esc_html__(
-                'Error. No locations list returned in Locations request.',
+                'Error. Domain registration response unrecognizable.',
                 'event_espresso'
             );
             return $request_error;
         }
-        // Got the list, return it.
-        return $response->locations;
+        // Got registration status.
+        return ['status' => $response->status];
     }
 }
