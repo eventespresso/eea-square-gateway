@@ -17,12 +17,12 @@ class DomainsApi
     /**
      * @var SquareApi
      */
-    protected SquareApi $api;
+    protected $api;
 
     /**
      * @var string
      */
-    protected string $request_url;
+    protected $request_url;
 
 
     /**

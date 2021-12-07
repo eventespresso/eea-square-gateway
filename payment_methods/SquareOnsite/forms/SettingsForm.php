@@ -28,14 +28,14 @@ class SettingsForm extends EE_Payment_Method_Form
      *
      * @var array
      */
-    protected array $squareData = [];
+    protected $squareData = [];
 
     /**
      *  The list of locations.
      *
      * @var array
      */
-    protected array $locations_list = [];
+    protected $locations_list = [];
 
     /**
      * Class constructor.
