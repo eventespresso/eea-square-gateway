@@ -227,7 +227,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @param EE_Payment_Method $paymentMethod
      * @return string
      */
-    public static function getMiddlemanBaseUrl(EE_Payment_Method $paymentMethod)
+    public static function getMiddlemanBaseUrl(EE_Payment_Method $paymentMethod): string
     {
         $middlemanTarget = defined('LOCAL_MIDDLEMAN_SERVER') ? 'test' : 'com';
         // If this PM is used under different provider accounts, you might need an account indicator.
@@ -412,10 +412,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function refreshToken(EE_Payment_Method $squarePm)
     {
-        if (! $squarePm instanceof EE_Payment_Method) {
-            $errMsg = esc_html__('Could not specify the payment method.', 'event_espresso');
-            EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, [], false);
-        }
         $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         if (! isset($squareData[ Domain::META_KEY_REFRESH_TOKEN ]) || ! $squareData[ Domain::META_KEY_REFRESH_TOKEN ]) {
             $errMsg = esc_html__('Could not find the refresh token.', 'event_espresso');
