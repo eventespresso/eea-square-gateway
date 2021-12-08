@@ -54,7 +54,7 @@
     <li>
         <strong><?php esc_html_e('Enable Digital Wallet', 'event_espresso'); ?></strong><br />
         <?php esc_html_e(
-            'Allows payments with digital wallets like Apple Pay, Google Pay.',
+            'Allows payments with digital wallets like Apple Pay and Google Pay.',
             'event_espresso'
         ); ?><br />
         <?php esc_html_e('Note, to take Apple Pay payments, the following criteria must be met:', 'event_espresso'); ?>
