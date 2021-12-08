@@ -64,9 +64,19 @@
             </li>
             <li>
                 <?php printf(
-                    esc_html__('Your domain has to be %1$svalidated with Apple%2$s.', 'event_espresso'),
+                    esc_html__('Your domain has to be %1$sverified with Apple%2$s.', 'event_espresso'),
                     '<a href="https://developer.squareup.com/docs/web-payments/apple-pay#step-1-register-your-sandbox-domain-with-apple" target="_blank">',
                     '</a>'
+                ); ?>
+            </li><li>
+                <?php esc_html_e('Your domain has to also be Registered with our App.', 'event_espresso'); ?><br />
+                <?php esc_html_e(
+                    'If your domain was verified before you authenticated (connected) on the payment method setting page, the domain registration (with our App) will occur automatically.',
+                    'event_espresso'
+                ); ?><br />
+                <?php esc_html_e(
+                    'Although, if it was not verified with Apple on the time of authentication, a black "Register My Domain" button should be available for triggering a manual Registration request.',
+                    'event_espresso'
                 ); ?>
             </li>
             <li>
