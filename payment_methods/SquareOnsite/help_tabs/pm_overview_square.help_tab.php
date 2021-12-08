@@ -78,7 +78,7 @@
         </ul>
         <?php printf(
             esc_html__(
-                'You can read the %1$sdocumentation%2$s for more information.',
+                'For more information, please refer to the %1$sdocumentation%2$s',
                 'event_espresso'
             ),
             '<a href="https://developer.squareup.com/docs/web-payments/apple-pay" target="_blank">',
