@@ -770,9 +770,9 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @param EE_Payment_Method|boolean $square_pm
      * @param string                    $err_msg
      * @param array                     $data
-     * @param bool                      $do_exit Should we echo json and exit
-     * @param bool                      $oauth
-     * @param bool                      $alert  Tells frontend to show an alert or not
+     * @param bool                      $echo_json_and_exit Should we echo json and exit
+     * @param bool                      $using_oauth
+     * @param bool                      $show_alert Tells frontend to show an alert or not
      * @return void
      * @throws EE_Error
      */
@@ -780,9 +780,9 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $square_pm,
         string $err_msg = '',
         array $data = [],
-        bool $do_exit = true,
-        bool $oauth = false,
-        bool $alert = false
+        bool $echo_json_and_exit = true,
+        bool $using_oauth = false,
+        bool $show_alert = false
     ) {
         $default_msg = 'Square error';
         if ($square_pm instanceof EE_Payment_Method) {
@@ -797,11 +797,11 @@ class EED_SquareOnsiteOAuth extends EED_Module
             );
         }
         // Do we echo json and exit ?
-        if ($do_exit) {
-            if ($oauth) {
+        if ($echo_json_and_exit) {
+            if ($using_oauth) {
                 self::closeOauthWindow($err_msg);
             } else {
-                self::returnJsonError($err_msg, $alert);
+                self::echoJsonError($err_msg, $show_alert);
             }
         }
     }
@@ -840,14 +840,14 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * Close the OAuth window with JS.
      *
      * @param string $err_msg
-     * @param bool   $alert
+     * @param bool   $show_alert
      * @return void
      */
-    public static function returnJsonError(string $err_msg = '', bool $alert = false)
+    public static function echoJsonError(string $err_msg = '', bool $show_alert = false)
     {
         echo wp_json_encode([
             'squareError' => $err_msg,
-            'alert'       => $alert,
+            'alert'       => $show_alert,
         ]);
         exit();
     }
