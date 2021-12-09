@@ -115,7 +115,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
             EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $err_msg, [], true, true);
         }
         // log the incoming data, don't exit
-        EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, 'Request access request response', $_GET, false);
+        EED_SquareOnsiteOAuth::errorLogAndExit(
+            $square_pm,
+            esc_html__('Request access request response', 'event_espresso'),
+            $_GET,
+            false
+        );
         if (
             empty($_GET['square_slug'])
             || empty($_GET[ Domain::META_KEY_EXPIRES_AT ])
@@ -368,7 +373,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
         // POST https://connect.eventespresso.dev/square/deauthorize
         $response = wp_remote_post($postUrl, $postArgs);
         // log the response, don't exit
-        EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, 'Request deauthorize', (array) $response, false);
+        EED_SquareOnsiteOAuth::errorLogAndExit(
+            $squarePm,
+            esc_html__('Request deauthorize', 'event_espresso'),
+            (array) $response,
+            false
+        );
 
         if (is_wp_error($response)) {
             EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $response->get_error_message(), [], true, false, true);
@@ -477,7 +487,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
             }
 
             // log the response, don't exit
-            EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, 'Refresh the token', (array) $responseBody, false);
+            EED_SquareOnsiteOAuth::errorLogAndExit(
+                $squarePm,
+                esc_html__('Refresh the token', 'event_espresso'),
+                (array) $responseBody,
+                false
+            );
 
             // Update the PM data.
             $squarePm->update_extra_meta(
