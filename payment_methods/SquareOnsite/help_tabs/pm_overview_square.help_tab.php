@@ -75,7 +75,7 @@
                     'event_espresso'
                 ); ?><br />
                 <?php esc_html_e(
-                    'Although, if it was not verified with Apple on the time of authentication, a black "Register My Domain" button should be available for triggering a manual Registration request.',
+                    'If it was not verified with Apple at the time of authentication, a black "Register My Domain" button should be available for triggering a manual Registration request.',
                     'event_espresso'
                 ); ?>
             </li>
