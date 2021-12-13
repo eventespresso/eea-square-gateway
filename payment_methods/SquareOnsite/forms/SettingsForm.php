@@ -140,6 +140,12 @@ class SettingsForm extends EE_Payment_Method_Form
                     // Seems like the Token got revoked or outdated, reset the connection.
                     $oauthReset = $this->resetOauthSettings($pmInstance);
                     if ($oauthReset) {
+                        EED_SquareOnsiteOAuth::errorLogAndExit(
+                            $pmInstance,
+                            'OAuth revoked',
+                            $oauthHealthCheck,
+                            false
+                        );
                         $this->add_validation_error(
                             sprintf(
                                 // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
@@ -154,6 +160,7 @@ class SettingsForm extends EE_Payment_Method_Form
                         );
                     }
                 } else {
+                    EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'OAuth error', $oauthHealthCheck, false);
                     $this->add_validation_error(
                         sprintf(
                             // translators: %1$s: the error message.
@@ -173,6 +180,7 @@ class SettingsForm extends EE_Payment_Method_Form
                 && $squareData[ Domain::META_KEY_LIVE_MODE ]
                 && $pmDebugMode
             ) {
+                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $squareData, false);
                 $this->add_validation_error(
                     sprintf(
                         // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
@@ -190,6 +198,7 @@ class SettingsForm extends EE_Payment_Method_Form
                 || ! $squareData[ Domain::META_KEY_LIVE_MODE ])
                 && ! $pmDebugMode
             ) {
+                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $squareData, false);
                 $this->add_validation_error(
                     sprintf(
                         // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
