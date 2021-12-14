@@ -79,4 +79,14 @@ class Domain
      * Holds the Square API version used in this integration.
      */
     public const SQUARE_API_VERSION = '2021-05-13';
+
+    /*
+     * Name of the Extra Meta that stores the domain verification status.
+     */
+    public const META_KEY_DOMAIN_VERIFY = 'domain_verified';
+
+    /*
+     * Holds the name of the Register Domain button.
+     */
+    public const META_KEY_REG_DOMAIN_BUTTON = 'register_domain';
 }

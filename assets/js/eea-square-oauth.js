@@ -17,6 +17,8 @@ jQuery(document).ready(function($) {
 	 *	debugModeInput: object,
 	 *	submittedPm: string,
 	 *	debugMode: string,
+	 *	registerDomainBtn: object,
+	 *	registerDomainBtnId: string,
 	 * }}
 	 *
 	 * @namespace eeaSquareOAuthParameters
@@ -44,10 +46,12 @@ jQuery(document).ready(function($) {
 		this.initialized = false;
 		this.connectBtn = {};
 		this.disconnectBtn = {};
+		this.registerDomainBtn = {};
 		this.form = {};
 		this.connectBtnId = '#eea_square_connect_btn_' + this.slug;
 		this.disconnectBtnId = '#eea_square_disconnect_btn_' + this.slug;
 		this.connectSectionId = '#eea_square_oauth_section_' + this.slug;
+		this.registerDomainBtnId = '#eea_apple_register_domain_' + this.slug;
 		this.useDwalletId = '#' + this.slug + '-use-dwallet';
 		this.connectSection = 'eea-connect-section-' + this.slug;
 		this.disconnectSection = 'eea-disconnect-section-' + this.slug;
@@ -90,6 +94,7 @@ jQuery(document).ready(function($) {
 		this.initializeObjects = function() {
 			this.connectBtn = $(this.connectBtnId);
 			this.disconnectBtn = $(this.disconnectBtnId);
+			this.registerDomainBtn = $(this.registerDomainBtnId);
 			this.form = $(this.formId);
 			this.debugModeInput = this.form.closest('form').find('select[name*='+this.slug+'][name*=PMD_debug_mode]');
 		};
@@ -210,6 +215,49 @@ jQuery(document).ready(function($) {
 					console.error(squareParams.unknownContainer);
 				}
 			});
+
+			$(this.registerDomainBtnId).on('click', function(event) {
+				event.preventDefault();
+				const buttonContainer = $(this).closest('tr');
+				const submittingForm = $(this).parents('form:first')[0];
+				if (buttonContainer && submittingForm) {
+					squarePmInstance.submittedPm = 'squareonsite';
+					squarePmInstance.debugMode = squarePmInstance.debugModeInput[0].value;
+					const requestData = {
+						action: 'squareRegisterDomain',
+						submittedPm: squarePmInstance.submittedPm,
+						debugMode: squarePmInstance.debugMode
+					};
+					$.ajax({
+						type: 'POST',
+						url: eei18n.ajax_url,
+						data: requestData,
+						dataType: 'json',
+						beforeSend: function() {
+							window.do_before_admin_page_ajax();
+						},
+						success: function(response) {
+							$('#' + squarePmInstance.processingIconName).fadeOut('fast');
+							console.log(response);
+							if (typeof response.status !== 'undefined') {
+							    // hide the button
+							    const domainNameSection = squarePmInstance.registerDomainBtn.closest('tr');
+							    domainNameSection.hide();
+							    alert(response.status);
+                            }
+							if (typeof response.squareError !== 'undefined') {
+							    alert(response.squareError);
+                            }
+						},
+						error: function(response, error, description) {
+							$('#' + squarePmInstance.processingIconName).fadeOut('fast');
+							alert(description);
+						}
+					});
+				} else {
+					console.error(squareParams.unknownContainer);
+				}
+			});
 		};
 
 		/**
@@ -325,7 +373,7 @@ jQuery(document).ready(function($) {
 				success: function(response) {
 					squarePmInstance.oauthRequestSuccess(response, requestAction);
 				},
-				error: squarePmInstance.oauthRequestError,
+				error: squarePmInstance.requestError,
 			});
 		};
 
@@ -376,19 +424,19 @@ jQuery(document).ready(function($) {
 			}
 		};
 
-		this.oauthRequestError = function(response, error, description) {
-			let squareError = squareParams.errorResponse;
+		this.requestError = function(response, err, description) {
+			let error = squareParams.errorResponse;
 			if (description) {
-				squareError = squareError + ': ' + description;
+				error = error + ': ' + description;
 			}
 			$('#' + this.processingIconName).fadeOut('fast');
-			console.error(squareError);
+			console.error(error);
 			// Display the error in the pop-up.
 			if (this.oauthWindow) {
 				this.oauthWindow.document.getElementById(
 					this.processingIconName
 				).style.display = 'none';
-				$(this.oauthWindow.document.body).html(squareError);
+				$(this.oauthWindow.document.body).html(error);
 				this.oauthWindow = null;
 			}
 			if (typeof response.alert !== 'undefined' && response.alert) {
@@ -455,6 +503,7 @@ jQuery(document).ready(function($) {
 					const disconnectSection = $('.' + squareInstance.disconnectSection);
 					const locationsSelect = $('.' + squareInstance.locationsSelect);
 					const locationsSection = locationsSelect.closest('tr');
+					const domainNameSection = squareInstance.registerDomainBtn.closest('tr');
 
 					if (typeof response.connected !== 'undefined' && response.connected) {
 						connectSection.hide();
@@ -487,6 +536,7 @@ jQuery(document).ready(function($) {
 						connectSection.show();
 						disconnectSection.hide();
 						locationsSection.hide();
+						domainNameSection.hide();
 						if (squareParams.canDisableInput) {
 							// Enable the debug mode selector.
 							squareInstance.debugModeInput.prop('disabled', false);

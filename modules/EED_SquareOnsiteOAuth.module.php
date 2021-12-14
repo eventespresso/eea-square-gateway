@@ -1,6 +1,7 @@
 <?php
 
 use EventEspresso\core\services\loaders\LoaderFactory;
+use EventEspresso\Square\api\domains\DomainsApi;
 use EventEspresso\Square\api\locations\LocationsApi;
 use EventEspresso\Square\api\SquareApi;
 use EventEspresso\Square\domain\Domain;
@@ -68,6 +69,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
             add_action('wp_ajax_squareUpdateConnectionStatus', [__CLASS__, 'updateConnectionStatus']);
             // Square disconnect.
             add_action('wp_ajax_squareRequestDisconnect', [__CLASS__, 'disconnectAccount']);
+            // register domain with Apple Pay
+            add_action('wp_ajax_squareRegisterDomain', [__CLASS__, 'registerDomainAjax']);
         }
     }
 
@@ -405,6 +408,83 @@ class EED_SquareOnsiteOAuth extends EED_Module
             'squareSuccess' => true,
         ]);
         exit();
+    }
+
+
+    /**
+     * Register the validated (clients) domain with Apple Pay. Ajax call.
+     *
+     * @return void
+     * @throws InvalidArgumentException
+     * @throws InvalidInterfaceException
+     * @throws InvalidDataTypeException
+     * @throws EE_Error
+     * @throws ReflectionException
+     */
+    public static function registerDomainAjax()
+    {
+        $square_pm = EED_SquareOnsiteOAuth::getSubmittedPm($_POST);
+        if (! $square_pm) {
+            $err_msg = esc_html__('Could not specify the payment method.', 'event_espresso');
+            EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $err_msg);
+        }
+
+        $response = EED_SquareOnsiteOAuth::registerDomain($square_pm);
+        if (! empty($response['error'])) {
+            // did we get an error ?
+            EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $response['error'], true, true);
+        } elseif (empty($response['status'])) {
+            $error = esc_html__('Sorry, something went wrong. Got a bad response.', 'event_espresso');
+            EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $error, true, true);
+        }
+        // if we got here, all should be good
+        echo wp_json_encode($response);
+        exit();
+    }
+
+
+    /**
+     * Register the validated (clients) domain with Apple Pay.
+     *
+     * @param EE_Payment_Method $square_pm
+     * @return array
+     * @throws EE_Error|ReflectionException
+     */
+    public static function registerDomain(EE_Payment_Method $square_pm): array
+    {
+        $response     = [];
+        $app_id  = $square_pm->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true);
+        $access_token = EED_SquareOnsiteOAuth::decryptString(
+            $square_pm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, ''),
+            $square_pm->debug_mode()
+        );
+        $use_dw = $square_pm->get_extra_meta(Domain::META_KEY_USE_DIGITAL_WALLET, true, false);
+        if (! $access_token || ! $app_id) {
+            return ['error' => esc_html__('Missing required OAuth information.', 'event_espresso')];
+        }
+
+        // register the domain
+        $square_api   = new SquareApi($access_token, $app_id, $use_dw, $square_pm->debug_mode());
+        $domains_api  = new DomainsApi($square_api);
+        $api_response = $domains_api->registerDomain(preg_replace('#^https?://#i', '', get_site_url()));
+        // log
+        $square_pm->type_obj()->get_gateway()->log(
+            ['Domain registration' => json_encode($api_response)],
+            'Payment_Method'
+        );
+        if (is_wp_error($api_response)) {
+            return ['error' => $api_response->get_error_message()];
+        } else {
+            if (! empty($api_response['error'])) {
+                $err_msg = ! empty($api_response['error']['message'])
+                    ? $api_response['error']['message']
+                    : esc_html__('Unknown response received!', 'event_espresso');
+                return ['error' => $err_msg];
+            }
+            // should be good
+            $response['status'] = ! empty($api_response['status']) ? $api_response['status'] : 'unknown';
+        }
+        return $response;
     }
 
 
