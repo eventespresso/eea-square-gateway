@@ -31,30 +31,28 @@ define('EEA_SQUARE_GATEWAY_PLUGIN_PATH', plugin_dir_path(__FILE__));
 // Register this add-on with EE.
 function loadEEASquareGateway()
 {
-    if (class_exists('EE_Addon')) {
-        require_once(EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'EE_SquareGateway.class.php');
-        EE_SquareGateway::registerAddon();
+    if (version_compare(PHP_VERSION, '7.1', '>=')) {
+        if (class_exists('EE_Addon')) {
+            require_once(EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'EE_SquareGateway.class.php');
+            EE_SquareGateway::registerAddon();
+        }
+    } else {
+        // Incompatible PHP version, disable the plugin.
+        add_action('admin_init', 'eeaSquareDisablePm');
     }
 }
 add_action('AHEE__EE_System__load_espresso_addons', 'loadEEASquareGateway');
 
 // Check PHP version etc.
-function eeaSquareCheckPhpAndComponents()
+function eeaSquareDisablePm()
 {
-    if (version_compare(PHP_VERSION, '7.1', '<')) {
-        if (isset($_GET['activate'])) {
-            unset($_GET['activate']);
-            unset($_REQUEST['activate']);
-        }
-
-        if (! function_exists('deactivate_plugins')) {
-            require_once ABSPATH . 'wp-admin/includes/plugin.php';
-        }
-        deactivate_plugins(plugin_basename(EEA_SQUARE_GATEWAY_PLUGIN_FILE));
-        add_action('admin_notices', 'eeaSquareDisablePmNotice');
+    unset($_GET['activate'], $_REQUEST['activate']);
+    if (! function_exists('deactivate_plugins')) {
+        require_once ABSPATH . 'wp-admin/includes/plugin.php';
     }
+    deactivate_plugins(plugin_basename(EEA_SQUARE_GATEWAY_PLUGIN_FILE));
+    add_action('admin_notices', 'eeaSquareDisablePmNotice');
 }
-add_action('admin_init', 'eeaSquareCheckPhpAndComponents');
 
 // The deactivation notice.
 function eeaSquareDisablePmNotice()
