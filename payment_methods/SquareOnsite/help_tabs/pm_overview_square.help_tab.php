@@ -4,10 +4,10 @@
 <p>
     <?php printf(
         esc_html__(
-            'Adjust the settings for the Square payment gateway. More information can be found on %1$ssquareup.com%2$s.',
+            'Adjust the settings for the Square payment gateway. More information can be found on %1$seventespresso.com%2$s.',
             'event_espresso'
         ),
-        '<a href="https://developer.squareup.com/" target="_blank">',
+        '<a href="https://eventespresso.com/wiki/eea-square-gateway/?utm_source=github&utm_medium=link&utm_campaign=ee_addon_description_readme&utm_content=view+addon+documentation" target="_blank">',
         '</a>'
     ); ?>
 </p>
@@ -53,12 +53,45 @@
     </li>
     <li>
         <strong><?php esc_html_e('Enable Digital Wallet', 'event_espresso'); ?></strong><br />
+        <?php esc_html_e(
+            'Allows payments with digital wallets like Apple Pay and Google Pay.',
+            'event_espresso'
+        ); ?><br />
+        <?php esc_html_e('Note, to take Apple Pay payments, the following criteria must be met:', 'event_espresso'); ?>
+        <ul>
+            <li>
+                <?php esc_html_e('Apple Pay is only supported on Apple Safari browsers.', 'event_espresso'); ?>
+            </li>
+            <li>
+                <?php printf(
+                    esc_html__('Your domain has to be %1$sverified with Apple%2$s.', 'event_espresso'),
+                    '<a href="https://developer.squareup.com/docs/web-payments/apple-pay#step-1-register-your-sandbox-domain-with-apple" target="_blank">',
+                    '</a>'
+                ); ?>
+            </li><li>
+                <?php esc_html_e('Your domain has to also be Registered with our App.', 'event_espresso'); ?><br />
+                <?php esc_html_e(
+                    'If your domain was verified before you authenticated (connected) on the payment method setting page, the domain registration (with our App) will occur automatically.',
+                    'event_espresso'
+                ); ?><br />
+                <?php esc_html_e(
+                    'If it was not verified with Apple at the time of authentication, a black "Register My Domain" button should be available for triggering a manual Registration request.',
+                    'event_espresso'
+                ); ?>
+            </li>
+            <li>
+                <?php esc_html_e(
+                    'Your website has to be on HTTPS. Apple Pay payments cannot be tested with HTTP or from localhost.',
+                    'event_espresso'
+                ); ?>
+            </li>
+        </ul>
         <?php printf(
             esc_html__(
-                'Allows payments with digital wallets like Apple Pay, Google Pay. You can read the %1$sdocumentation%2$s for more information.',
+                'For more information, please refer to the %1$sdocumentation%2$s',
                 'event_espresso'
             ),
-            '<a href="https://developer.squareup.com/docs/payments-digital-wallets" target="_blank">',
+            '<a href="https://developer.squareup.com/docs/web-payments/apple-pay" target="_blank">',
             '</a>'
         ); ?>
     </li>
