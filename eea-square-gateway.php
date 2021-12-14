@@ -8,7 +8,7 @@
 
     Author: Event Espresso
     Author URI: https://eventespresso.com
-    Copyright 2020 Event Espresso (email : support@eventespresso.com)
+    Copyright 2021 Event Espresso (email : support@eventespresso.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License, version 2, as
@@ -37,4 +37,37 @@ function loadEEASquareGateway()
     }
 }
 add_action('AHEE__EE_System__load_espresso_addons', 'loadEEASquareGateway');
+
+// Check PHP version etc.
+function eeaSquareCheckPhpAndComponents()
+{
+    if (version_compare(PHP_VERSION, '7.1', '<')) {
+        if (isset($_GET['activate'])) {
+            unset($_GET['activate']);
+            unset($_REQUEST['activate']);
+        }
+
+        if (! function_exists('deactivate_plugins')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        deactivate_plugins(plugin_basename(EEA_SQUARE_GATEWAY_PLUGIN_FILE));
+        add_action('admin_notices', 'eeaSquareDisablePmNotice');
+    }
+}
+add_action('admin_init', 'eeaSquareCheckPhpAndComponents');
+
+// The deactivation notice.
+function eeaSquareDisablePmNotice()
+{
+    echo '<div class="error"><p>'
+         . sprintf(
+             esc_html__(
+                 '%1$s Event Espresso - Square Gateway %2$s was deactivated! This plugin requires a %1$sPHP version 7.1 or higher%2$s to work properly.',
+                 'event_espresso'
+             ),
+             '<strong>',
+             '</strong>'
+         )
+         . '</p></div>';
+}
 // End of file eea-square-gateway.php
