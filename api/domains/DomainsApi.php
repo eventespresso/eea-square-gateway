@@ -10,7 +10,7 @@ use EventEspresso\Square\api\SquareApi;
  *
  * @author  Nazar Kolivoshka
  * @package EventEspresso\Square\api\domains
- * @since   $VID:$
+ * @since   1.0.1.p
  */
 class DomainsApi
 {
