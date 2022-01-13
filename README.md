@@ -5,7 +5,7 @@ Square Payment Method add-on
 [![Travis](https://travis-ci.org/eventespresso/eea-square-gateway.svg?branch=master)](https://travis-ci.org/eventespresso/eea-square-gateway)
 [![License](https://img.shields.io/badge/License-GPLv2-blue.svg?style=flat)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![Event Espresso Addon](https://img.shields.io/badge/Addon%20For-Event%20Espresso-blue.svg)](https://github.com/eventespresso/event-espresso-core)
-[![Minimum EE Core Version:](https://img.shields.io/badge/Minimum%20EE%20core%20ver-4.10.15.p-red.svg)](https://github.com/eventespresso/event-espresso-core/releases/tag/4.10.15.p)
+[![Minimum EE Core Version:](https://img.shields.io/badge/Minimum%20EE%20core%20ver-4.10.20.p-red.svg)](https://github.com/eventespresso/event-espresso-core/releases/tag/4.10.20.p)
 
 Square Payment Method for [Event Espresso](https://github.com/eventespresso/event-espresso-core). With Square an attendee will be able to pay with a credit, or a debit card while staying on your website. This gateway also supports Apple Pay and Goole Pay through a secure imbedded form on your website. No payment information like card details will go through your website. On mobile devices, attendees will pay on a page and then see their registration confirmation.
 
