@@ -10,8 +10,6 @@ Square Payment Method add-on
 Square Payment Method for [Event Espresso](https://github.com/eventespresso/event-espresso-core). With Square an attendee will be able to pay with a credit, or a debit card while staying on your website. This gateway also supports Apple Pay and Goole Pay through a secure imbedded form on your website. No payment information like card details will go through your website. On mobile devices, attendees will pay on a page and then see their registration confirmation.
 
 
->**Important:** This add-on is not released yet so some links below likely won't work. Also, unreleased add-ons have development happening on the master branch and there *could* be breaking changes. Do **not** use this add-on in production. 
-
 > Note, there is **no usage support** provided here. Please read the entire contents of this document before posting any issues. If we encounter issues that give evidence of this document not having been read the issue _will be closed_.
 
 | **Some Links**|     |
