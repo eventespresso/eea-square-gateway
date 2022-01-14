@@ -103,8 +103,8 @@ class SettingsForm extends EE_Payment_Method_Form
     public function validateConnection(EE_Payment_Method $pmInstance)
     {
         // If there is an established connection we should check the debug mode and the connection.
-        $pmDebugMode     = $pmInstance->debug_mode();
-        $debugInput      = $this->get_input('PMD_debug_mode', false);
+        $pmDebugMode = $pmInstance->debug_mode();
+        $debugInput  = $this->get_input('PMD_debug_mode', false);
 
         if (isset($this->squareData[ Domain::META_KEY_USING_OAUTH ])
             && $this->squareData[ Domain::META_KEY_USING_OAUTH ]
@@ -159,7 +159,7 @@ class SettingsForm extends EE_Payment_Method_Form
                 && $this->squareData[ Domain::META_KEY_LIVE_MODE ]
                 && $pmDebugMode
             ) {
-                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $squareData, false);
+                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $this->squareData, false);
                 $this->add_validation_error(
                     sprintf(
                         // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
@@ -177,7 +177,7 @@ class SettingsForm extends EE_Payment_Method_Form
                 || ! $this->squareData[ Domain::META_KEY_LIVE_MODE ])
                 && ! $pmDebugMode
             ) {
-                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $squareData, false);
+                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $this->squareData, false);
                 $this->add_validation_error(
                     sprintf(
                         // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
@@ -216,16 +216,21 @@ class SettingsForm extends EE_Payment_Method_Form
      */
     public function oauthHealthCheck(EE_Payment_Method $pmInstance): array
     {
+        $error = [
+            'error' => [
+                'code'    => 'NO_ACCESS_TOKEN',
+                'message' => esc_html__('One or more authentication parameters are missing', 'event_espresso')
+            ]
+        ];
         // Double check main oAuth parameters.
-        $access_token = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, '');
-        $app_id       = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true, '');
+        try {
+            $access_token = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, '');
+            $app_id       = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true, '');
+        } catch (EE_Error | ReflectionException $e) {
+            return $error;
+        }
         if (! $access_token || ! $app_id) {
-            return [
-                'error' => [
-                    'code'    => 'NO_ACCESS_TOKEN',
-                    'message' => esc_html__('One or more authentication parameters are missing', 'event_espresso')
-                ]
-            ];
+            return $error;
         }
 
         // Request a list of locations to check API requests.
@@ -391,7 +396,7 @@ class SettingsForm extends EE_Payment_Method_Form
         }
 
         // disable domain registration button if digital wallet not enabled
-        $using_oauth = $this->squareData[ Domain::META_KEY_USING_OAUTH ];
+        $using_oauth     = $this->squareData[ Domain::META_KEY_USING_OAUTH ] ?? false;
         $domain_verified = ! empty($this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ])
             ? $this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ]
             : 'unknown';
@@ -410,11 +415,15 @@ class SettingsForm extends EE_Payment_Method_Form
      */
     private function registerBlogDomain(EE_Payment_Method $pmInstance)
     {
-        $response = EED_SquareOnsiteOAuth::registerDomain($pmInstance);
-        if (! empty($response['status'])) {
-            // save the status
-            $this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ] = $response['status'];
-            $pmInstance->update_extra_meta(Domain::META_KEY_SQUARE_DATA, $this->squareData);
+        try {
+            $response = EED_SquareOnsiteOAuth::registerDomain($pmInstance);
+            if (! empty($response['status'])) {
+                // save the status
+                $this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ] = $response['status'];
+                $pmInstance->update_extra_meta(Domain::META_KEY_SQUARE_DATA, $this->squareData);
+            }
+        } catch (EE_Error | ReflectionException $e) {
+            // No action required here in this case.
         }
     }
 }
