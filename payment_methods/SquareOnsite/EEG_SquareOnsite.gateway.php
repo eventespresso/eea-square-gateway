@@ -1,5 +1,6 @@
 <?php
 
+use EventEspresso\Square\api\customers\CustomersApi;
 use EventEspresso\Square\api\order\CreateOrder;
 use EventEspresso\Square\api\payment\PaymentApi;
 use EventEspresso\Square\api\SquareApi;
@@ -44,6 +45,24 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      */
     protected $_currencies_supported = EE_Gateway::all_currencies_supported;
 
+    /**
+     * Square API object.
+     * @var SquareApi
+     */
+    protected $square_api;
+
+    /**
+     * Square payment API object.
+     * @var PaymentApi
+     */
+    protected $payment_api;
+
+    /**
+     * Square customers API object.
+     * @var CustomersApi
+     */
+    protected $customers_api;
+
 
     /**
      * Process the payment.
@@ -56,7 +75,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      */
     public function do_direct_payment($payment, $billing_info = null)
     {
-        $failedStatus = $this->_pay_model->failed_status();
+        $failedStatus   = $this->_pay_model->failed_status();
         $declinedStatus = $this->_pay_model->declined_status();
         // A default error message just in case.
         $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');
@@ -86,7 +105,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         }
 
         // Now create the Payment.
-        $processedPayment = $this->createAndProcessPayment($payment, $billing_info, $orderId);
+        $processedPayment = $this->createAndProcessPayment($payment, $transaction, $billing_info, $orderId);
         if ($processedPayment instanceof EE_Payment) {
             return $processedPayment;
         }
@@ -123,20 +142,26 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
     /**
      * Create a Square Payment for the transaction.
      *
-     * @param EE_Payment $payment
-     * @param array      $billing_info
+     * @param EE_Payment      $payment
+     * @param array           $billing_info
+     * @param EE_Registration $primary_registrant
      * @return Object
      * @throws EE_Error
      * @throws ReflectionException
      */
-    private function getPaymentApi(EE_Payment $payment, array $billing_info): PaymentApi
-    {
-        return new PaymentApi(
+    private function getPaymentApi(
+        EE_Payment $payment,
+        array $billing_info,
+        EE_Registration $primary_registrant
+    ): PaymentApi {
+        $this->payment_api = $this->payment_api ?? new PaymentApi(
             $this,
             $this->getSquareApi(),
+            $this->getCustomersApi($billing_info, $primary_registrant),
             $billing_info,
             $payment->transaction()->ID()
         );
+        return $this->payment_api;
     }
 
 
@@ -158,35 +183,58 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      */
     private function getSquareApi(): SquareApi
     {
-        return new SquareApi(
+        $this->square_api = $this->square_api ?? new SquareApi(
             EED_SquareOnsiteOAuth::decryptString($this->_access_token, $this->_debug_mode),
             $this->_application_id,
             $this->_use_dwallet,
             $this->_debug_mode,
             $this->_location_id
         );
+        return $this->square_api;
+    }
+
+
+    /**
+     * @param array           $billing_info
+     * @param EE_Registration $primary_registrant
+     * @return CustomersApi
+     */
+    private function getCustomersApi(array $billing_info, EE_Registration $primary_registrant): CustomersApi
+    {
+        $this->customers_api = $this->customers_api ?? new CustomersApi(
+            $this->getSquareApi(),
+            $billing_info,
+            $primary_registrant
+        );
+        return $this->customers_api;
     }
 
 
     /**
      * Create a Square Order for the transaction.
      *
-     * @param EE_Payment $payment
-     * @param array      $billing_info
-     * @param string     $orderId
+     * @param EE_Payment     $payment
+     * @param EE_Transaction $transaction
+     * @param array          $billing_info
+     * @param string         $orderId
      * @return EE_Payment
      * @throws EE_Error
      * @throws ReflectionException
      */
-    public function createAndProcessPayment(EE_Payment $payment, array $billing_info, string $orderId = ''): EE_Payment
-    {
-        $approvedStatus = $this->_pay_model->approved_status();
-        $declinedStatus = $this->_pay_model->declined_status();
+    public function createAndProcessPayment(
+        EE_Payment $payment,
+        EE_Transaction $transaction,
+        array $billing_info,
+        string $orderId = ''
+    ): EE_Payment {
+        $approvedStatus     = $this->_pay_model->approved_status();
+        $declinedStatus     = $this->_pay_model->declined_status();
+        $primary_registrant = $transaction->primary_registration();
 
-        $payment_api = $this->getPaymentApi($payment, $billing_info);
+        $payment_api = $this->getPaymentApi($payment, $billing_info, $primary_registrant);
         $payment_response = $payment_api->createPayment($payment, $orderId);
 
-        // If it's a string - it's an error. So pass that message further.
+        // If it's an array - it's an error. So pass that message further.
         if (is_array($payment_response) && isset($payment_response['error'])) {
             return $this->setPaymentStatus($payment, $declinedStatus, '', $payment_response['error']['message']);
         }

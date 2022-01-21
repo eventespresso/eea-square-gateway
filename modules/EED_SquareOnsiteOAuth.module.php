@@ -214,7 +214,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             [
                 'return_url' => rawurlencode($redirectUri),
                 'scope'      => urlencode(
-                    'PAYMENTS_WRITE PAYMENTS_READ ORDERS_WRITE ORDERS_READ MERCHANT_PROFILE_READ'
+                    'PAYMENTS_WRITE PAYMENTS_READ ORDERS_WRITE ORDERS_READ MERCHANT_PROFILE_READ CUSTOMERS_READ CUSTOMERS_WRITE'
                 ),
                 'modal'      => true
             ],
