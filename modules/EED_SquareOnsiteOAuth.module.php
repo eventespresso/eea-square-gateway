@@ -840,15 +840,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     private static function cleanDataArray(array $data): array
     {
-        $sensitive_data = [
-            'access_token'  => '',
-            'refresh_token' => '',
-            'nonce'         => '',
-        ];
+        $sensitive_data = ['access_token', 'refresh_token', 'nonce'];
         foreach ($data as $key => $value) {
             $data[ $key ] = is_array($value) ? EED_SquareOnsiteOAuth::cleanDataArray($value) : $value;
+            $data[ $key ] = in_array($key, $sensitive_data) ? '***' : $value;
         }
-        return array_diff_key($data, $sensitive_data);
+        return $data;
     }
 
 
