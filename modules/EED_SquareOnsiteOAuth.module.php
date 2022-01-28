@@ -537,8 +537,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         if (is_wp_error($response)) {
             return EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $response->get_error_message(), [], false);
         } else {
-            // $responseBody = (isset($response['body']) && $response['body']) ? json_decode($response['body']) : false;
-            $responseBody = null;
+            $responseBody = (isset($response['body']) && $response['body']) ? json_decode($response['body']) : false;
             if (
                 ! $responseBody
                 || (
