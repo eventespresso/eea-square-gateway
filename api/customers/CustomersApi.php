@@ -77,10 +77,10 @@ class CustomersApi
         // Submit the search request.
         $response = $this->api->sendRequest($search_parameters, $this->post_url . 'search');
         // Do we have an error ?
-        if (is_array($response) && isset($response['error'])) {
+        if ($this->isErrorResponse($response)) {
             return $response;
         }
-        if (! $response || ! isset($response->customers)) {
+        if (! $this->hasCustomerData($response)) {
             // Square return an empty body if nothing is found, so we return an empty array.
             return [];
         }
@@ -134,10 +134,10 @@ class CustomersApi
         // Submit the create request.
         $response = $this->api->sendRequest($parameters, $this->post_url);
         // Do we have an error ?
-        if (is_array($response) && isset($response['error'])) {
+        if ($this->isErrorResponse($response)) {
             return $response;
         }
-        if (! isset($response->customer)) {
+        if (! $this->hasCustomerData($response)) {
             $request_error['error']['message'] = esc_html__(
                 'Error. Customer was not saved in Square. Unrecognized error.',
                 'event_espresso'
@@ -146,5 +146,29 @@ class CustomersApi
         }
         // Got it, return it.
         return $response->customer;
+    }
+
+
+    /**
+     * Check the response for a customer object.
+     *
+     * @param $response
+     * @return bool
+     */
+    private function hasCustomerData($response): bool
+    {
+        return $response && isset($response->customer);
+    }
+
+
+    /**
+     * Check the response for errors.
+     *
+     * @param $response
+     * @return bool
+     */
+    private function isErrorResponse($response): bool
+    {
+        return is_array($response) && isset($response['error']);
     }
 }
