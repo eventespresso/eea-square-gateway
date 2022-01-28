@@ -6,7 +6,6 @@ use EE_Error;
 use EE_Payment;
 use EED_SquareOnsite;
 use EEG_SquareOnsite;
-use EventEspresso\Square\api\customers\CustomersApi;
 use EventEspresso\Square\api\IdempotencyKey;
 use EventEspresso\Square\api\SquareApi;
 use ReflectionException;
@@ -64,34 +63,24 @@ class PaymentApi
      */
     protected $billing_info = [];
 
-    /**
-     * The Customers API instance.
-     *
-     * @var CustomersApi
-     */
-    protected $customers_api;
-
 
     /**
      * CancelOrder constructor.
      *
      * @param EEG_SquareOnsite $gateway
      * @param SquareApi        $api
-     * @param CustomersApi     $customers_api
      * @param array            $billing_info
      * @param int              $TXN_ID
      */
     public function __construct(
         EEG_SquareOnsite $gateway,
         SquareApi $api,
-        CustomersApi $customers_api,
         array $billing_info,
         int $TXN_ID
     ) {
         $this->api               = $api;
         $this->gateway           = $gateway;
         $this->billing_info      = $billing_info;
-        $this->customers_api     = $customers_api;
         $this->payment_token     = $billing_info['eea_square_token'] ?? '';
         $this->verificationToken = $billing_info['eea_square_sca'] ?? '';
         $this->post_url          = $this->api->apiEndpoint() . 'payments';
@@ -197,18 +186,6 @@ class PaymentApi
                 'postal_code'    => $this->billing_info['zip'] ?? '',
             ],
         ];
-
-        // Search to see if this user already exists as a customer.
-        $found_customer = $this->customers_api->findByEmail($this->billing_info['email']);
-        if (! $found_customer) {
-            $customer = $this->customers_api->create();
-            if (is_object($customer)) {
-                $payment_body['customer_id'] = $customer->id;
-            }
-        } else if (is_array($found_customer) && ! empty($found_customer[0]->id)) {
-            // Customer already exists. Need only one.
-            $payment_body['customer_id'] = $found_customer[0]->id;
-        }
 
         // Is there a verifications token (SCA) ?
         if ($this->verificationToken) {

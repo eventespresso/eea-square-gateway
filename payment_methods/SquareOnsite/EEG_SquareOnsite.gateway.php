@@ -75,37 +75,25 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      */
     public function do_direct_payment($payment, $billing_info = null)
     {
-        $failedStatus   = $this->_pay_model->failed_status();
-        $declinedStatus = $this->_pay_model->declined_status();
+        $paymentStatus['failed']   = $this->_pay_model->failed_status();
+        $paymentStatus['declined'] = $this->_pay_model->declined_status();
         // A default error message just in case.
         $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');
 
         // Check the payment.
         $isValidPayment = $this->isPaymentValid($payment, $billing_info);
-        if ($isValidPayment->details() === 'error' && $isValidPayment->status() === $failedStatus) {
+        if ($isValidPayment->details() === 'error' && $isValidPayment->status() === $paymentStatus['failed']) {
             return $isValidPayment;
         }
         $transaction = $payment->transaction();
 
-        // Do we already have an order ID ?
-        $orderId = $transaction->get_extra_meta('order_id', true, false);
-        if (! $orderId) {
-            // Create an Order for this transaction.
-            $create_order_api = $this->getCreateOrderApi($payment);
-            $order            = $create_order_api->create($payment);
-            if (is_array($order) && isset($order['error'])) {
-                $errorMessage = (string) $order['error']['message'];
-                $orderError = esc_html__('No order created !', 'event_espresso');
-                return $this->setPaymentStatus($payment, $failedStatus, $orderError, $errorMessage);
-            }
-            $orderId = $order->id;
-            // Associate the Order with this transaction.
-            $transaction->add_extra_meta('order_id', $orderId);
-            $transaction->add_extra_meta('order_version', $order->version);
-        }
+        // Get the Customer ID.
+        $customer_id = $this->getCustomerId($transaction, $billing_info);
+        // Get the order ID.
+        $order_id = $this->getOrderId($payment, $transaction, $paymentStatus, $customer_id);
 
         // Now create the Payment.
-        $processedPayment = $this->createAndProcessPayment($payment, $transaction, $billing_info, $orderId);
+        $processedPayment = $this->createAndProcessPayment($payment, $billing_info, $order_id);
         if ($processedPayment instanceof EE_Payment) {
             return $processedPayment;
         }
@@ -113,7 +101,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         // Something went wrong if we got here.
         return $this->setPaymentStatus(
             $payment,
-            $declinedStatus,
+            $paymentStatus['declined'],
             esc_html__('Was not able to create a payment. Please contact admin.', 'event_espresso'),
             $paymentMgs
         );
@@ -144,20 +132,15 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      *
      * @param EE_Payment      $payment
      * @param array           $billing_info
-     * @param EE_Registration $primary_registrant
      * @return Object
      * @throws EE_Error
      * @throws ReflectionException
      */
-    private function getPaymentApi(
-        EE_Payment $payment,
-        array $billing_info,
-        EE_Registration $primary_registrant
-    ): PaymentApi {
+    private function getPaymentApi(EE_Payment $payment, array $billing_info): PaymentApi
+    {
         $this->payment_api = $this->payment_api ?? new PaymentApi(
             $this,
             $this->getSquareApi(),
-            $this->getCustomersApi($billing_info, $primary_registrant),
             $billing_info,
             $payment->transaction()->ID()
         );
@@ -214,25 +197,22 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      * Create a Square Order for the transaction.
      *
      * @param EE_Payment     $payment
-     * @param EE_Transaction $transaction
      * @param array          $billing_info
-     * @param string         $orderId
+     * @param string         $order_id
      * @return EE_Payment
      * @throws EE_Error
      * @throws ReflectionException
      */
     public function createAndProcessPayment(
         EE_Payment $payment,
-        EE_Transaction $transaction,
         array $billing_info,
-        string $orderId = ''
+        string $order_id = ''
     ): EE_Payment {
         $approvedStatus     = $this->_pay_model->approved_status();
         $declinedStatus     = $this->_pay_model->declined_status();
-        $primary_registrant = $transaction->primary_registration();
 
-        $payment_api = $this->getPaymentApi($payment, $billing_info, $primary_registrant);
-        $payment_response = $payment_api->createPayment($payment, $orderId);
+        $payment_api = $this->getPaymentApi($payment, $billing_info);
+        $payment_response = $payment_api->createPayment($payment, $order_id);
 
         // If it's an array - it's an error. So pass that message further.
         if (is_array($payment_response) && isset($payment_response['error'])) {
@@ -249,7 +229,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         if ($payment_response->status === 'APPROVED') {
             // Huh, this should have auto completed... Ok, try to complete the payment.
             // Submit the payment.
-            $completeResponse = $payment_api->completePayment($payment, $payment_response->id, $orderId);
+            $completeResponse = $payment_api->completePayment($payment, $payment_response->id, $order_id);
             if (is_object($completeResponse) && isset($completeResponse->payment)) {
                 $completePayment = $completeResponse->payment;
                 if ($completePayment->status === 'COMPLETED') {
@@ -417,5 +397,78 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         }
         // All looks good.
         return $payment;
+    }
+
+
+    /**
+     * Get Square Order ID.
+     *
+     * @param EEI_Payment     $payment
+     * @param EEI_Transaction $transaction
+     * @param array           $paymentStatus
+     * @param string          $customer_id
+     * @return string
+     */
+    public function getOrderId(
+        EEI_Payment $payment,
+        EEI_Transaction $transaction,
+        array $paymentStatus,
+        string $customer_id
+    ): string {
+        // Do we already have an order ID ?
+        $order_id = $transaction->get_extra_meta('order_id', true, false);
+        if (! $order_id) {
+            // Create an Order for this transaction.
+            try {
+                $create_order_api = $this->getCreateOrderApi($payment);
+                $order            = $create_order_api->create($payment, $customer_id);
+                if (is_array($order) && isset($order['error'])) {
+                    $error_message = (string) $order['error']['message'];
+                    $order_error = esc_html__('No order created !', 'event_espresso');
+                    return $this->setPaymentStatus($payment, $paymentStatus['failed'], $order_error, $error_message);
+                }
+                $order_id = $order->id;
+                // Associate the Order with this transaction.
+                $transaction->add_extra_meta('order_id', $order_id);
+                $transaction->add_extra_meta('order_version', $order->version);
+                return $order_id;
+            } catch (EE_Error | ReflectionException $e) {
+                return '';
+            }
+        }
+        return '';
+    }
+
+
+    /**
+     * Get Square Customer ID.
+     *
+     * @param EEI_Transaction $transaction
+     * @param                 $billing_info
+     * @return string
+     */
+    public function getCustomerId(EEI_Transaction $transaction, $billing_info): string
+    {
+        // Do we already have a Customer ID for this transaction ?
+        $customer_id = $transaction->get_extra_meta('customer_id', true, '');
+        if (! $customer_id) {
+            // Create a customer for this transaction.
+            $primary_registrant  = $transaction->primary_registration();
+            $customers_api       = $this->getCustomersApi($billing_info, $primary_registrant);
+            // Search to see if this user already exists as a customer.
+            $found_customer      = $customers_api->findByEmail($billing_info['email']);
+            if (! $found_customer) {
+                $customer = $customers_api->create();
+                if (is_object($customer)) {
+                    $customer_id = $customer->id;
+                }
+            } else if (is_array($found_customer) && ! empty($found_customer[0]->id)) {
+                // Customer already exists. Need only one.
+                $customer_id = $found_customer[0]->id;
+            }
+        }
+        // Associate the Customer with this transaction.
+        $transaction->add_extra_meta('customer_id', $customer_id);
+        return $customer_id;
     }
 }

@@ -68,11 +68,12 @@ class CreateOrder extends OrdersApi
      * Create a Square Order.
      *
      * @param EE_Payment $payment
+     * @param string     $customer_id
      * @return Object|array
      * @throws EE_Error
      * @throws ReflectionException
      */
-    public function create(EE_Payment $payment)
+    public function create(EE_Payment $payment, string $customer_id = '')
     {
         $this->order_items = new OrderItems();
         $transaction       = $payment->transaction();
@@ -90,7 +91,7 @@ class CreateOrder extends OrdersApi
         // Just in case we were not able to recognize some item, add the difference as an extra line item.
         $this->addOtherLineItems($transaction, $currency);
 
-        $order = $this->buildOrder($transaction->ID());
+        $order = $this->buildOrder($transaction->ID(), $customer_id);
         // First calculate the order to see if the prices match.
         $calculateResponse = $this->api->sendRequest($order, $this->post_url . 'calculate');
         $order             = $this->adjustResponseTotal($calculateResponse, $order, $payment_amount, $currency);
@@ -278,10 +279,11 @@ class CreateOrder extends OrdersApi
     /**
      * Forms the Order.
      *
-     * @param int $TXN_ID
+     * @param int    $TXN_ID
+     * @param string $customer_id
      * @return array
      */
-    private function buildOrder(int $TXN_ID): array
+    private function buildOrder(int $TXN_ID, string $customer_id = ''): array
     {
         $key_prefix = $this->api->isSandboxMode() ? 'TEST-order' : 'event-order';
         // Form an order with all the line items and discounts.
@@ -293,6 +295,11 @@ class CreateOrder extends OrdersApi
                 'line_items'   => $this->order_items->items(),
             ],
         ];
+
+        // Add extra parameters. A customer in this case.
+        if ($customer_id) {
+            $order['order']['customer_id'] = $customer_id;
+        }
 
         // Check the taxes and discounts before adding.
         if ($this->order_items->hasTaxes()) {
