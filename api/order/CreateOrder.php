@@ -90,6 +90,8 @@ class CreateOrder extends OrdersApi
         }
         // Just in case we were not able to recognize some item, add the difference as an extra line item.
         $this->addOtherLineItems($transaction, $currency);
+        // Also add a fulfillment. This is required for the order to be displayed in the dashboard.
+        $this->addOrderFulfillment($transaction);
 
         $order = $this->buildOrder($transaction->ID(), $customer_id);
         // First calculate the order to see if the prices match.
@@ -277,6 +279,32 @@ class CreateOrder extends OrdersApi
 
 
     /**
+     * Add an order fulfillment.
+     *
+     * @param EE_Transaction $transaction
+     */
+    private function addOrderFulfillment(EE_Transaction $transaction)
+    {
+        try {
+            $primary_registrant = $transaction->primary_registration();
+            $display_name = $primary_registrant->attendeeName();
+        } catch (EE_Error | ReflectionException $e) {
+            $display_name = 'Unknown';
+        }
+        $this->order_items->addFulfillment([
+            'type'  => 'SHIPMENT',
+            'state' => 'PROPOSED',
+            'shipment_details' => [
+                'recipient' => [
+                    'display_name' => $display_name
+                ],
+                'pickup_at' => date("c", time()),
+            ],
+        ]);
+    }
+
+
+    /**
      * Forms the Order.
      *
      * @param int    $TXN_ID
@@ -307,6 +335,10 @@ class CreateOrder extends OrdersApi
         }
         if (! empty($this->order_items->hasDiscounts())) {
             $order['order']['discounts'] = $this->order_items->discounts();
+        }
+        // Fulfillment is required for the order to be displayed in the dashboard.
+        if (! empty($this->order_items->hasFulfillments())) {
+            $order['order']['fulfillments'] = $this->order_items->fulfillments();
         }
         return $order;
     }
