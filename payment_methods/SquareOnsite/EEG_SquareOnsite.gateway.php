@@ -75,14 +75,14 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      */
     public function do_direct_payment($payment, $billing_info = null)
     {
-        $paymentStatus['failed']   = $this->_pay_model->failed_status();
-        $paymentStatus['declined'] = $this->_pay_model->declined_status();
+        $payment_status['failed']   = $this->_pay_model->failed_status();
+        $payment_status['declined'] = $this->_pay_model->declined_status();
         // A default error message just in case.
-        $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');
+        $payment_mgs = esc_html__('Unrecognized Error.', 'event_espresso');
 
         // Check the payment.
         $isValidPayment = $this->isPaymentValid($payment, $billing_info);
-        if ($isValidPayment->details() === 'error' && $isValidPayment->status() === $paymentStatus['failed']) {
+        if ($isValidPayment->details() === 'error' && $isValidPayment->status() === $payment_status['failed']) {
             return $isValidPayment;
         }
         $transaction = $payment->transaction();
@@ -90,7 +90,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         // Get the Customer ID.
         $customer_id = $this->getCustomerId($transaction, $billing_info);
         // Get the order ID.
-        $order_id = $this->getOrderId($payment, $transaction, $paymentStatus, $customer_id);
+        $order_id = $this->getOrderId($payment, $transaction, $payment_status, $customer_id);
 
         // Now create the Payment.
         $processedPayment = $this->createAndProcessPayment($payment, $billing_info, $order_id);
@@ -101,9 +101,9 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         // Something went wrong if we got here.
         return $this->setPaymentStatus(
             $payment,
-            $paymentStatus['declined'],
+            $payment_status['declined'],
             esc_html__('Was not able to create a payment. Please contact admin.', 'event_espresso'),
-            $paymentMgs
+            $payment_mgs
         );
     }
 
@@ -208,45 +208,45 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         array $billing_info,
         string $order_id = ''
     ): EE_Payment {
-        $approvedStatus     = $this->_pay_model->approved_status();
-        $declinedStatus     = $this->_pay_model->declined_status();
+        $payment_status['approved'] = $this->_pay_model->approved_status();
+        $payment_status['declined'] = $this->_pay_model->declined_status();
 
-        $payment_api = $this->getPaymentApi($payment, $billing_info);
+        $payment_api      = $this->getPaymentApi($payment, $billing_info);
         $payment_response = $payment_api->createPayment($payment, $order_id);
 
         // If it's an array - it's an error. So pass that message further.
         if (is_array($payment_response) && isset($payment_response['error'])) {
-            return $this->setPaymentStatus($payment, $declinedStatus, '', $payment_response['error']['message']);
+            return $this->setPaymentStatus($payment, $payment_status['declined'], '', $payment_response['error']['message']);
         }
 
-        $paymentMgs = esc_html__('Unrecognized Error.', 'event_espresso');
+        $payment_mgs = esc_html__('Unrecognized Error.', 'event_espresso');
         // Get the payment object and check the status.
         if ($payment_response->status === 'COMPLETED') {
-            $this->updateEspressoPayment($payment, $payment_response, $approvedStatus);
+            $this->updateEspressoPayment($payment, $payment_response, $payment_status['approved']);
             // Return as the payment is COMPLETE.
             return $payment;
         }
         if ($payment_response->status === 'APPROVED') {
             // Huh, this should have auto completed... Ok, try to complete the payment.
             // Submit the payment.
-            $completeResponse = $payment_api->completePayment($payment, $payment_response->id, $order_id);
-            if (is_object($completeResponse) && isset($completeResponse->payment)) {
-                $completePayment = $completeResponse->payment;
+            $complete_response = $payment_api->completePayment($payment, $payment_response->id, $order_id);
+            if (is_object($complete_response) && isset($complete_response->payment)) {
+                $completePayment = $complete_response->payment;
                 if ($completePayment->status === 'COMPLETED') {
-                    $this->updateEspressoPayment($payment, $completePayment, $approvedStatus);
+                    $this->updateEspressoPayment($payment, $completePayment, $payment_status['approved']);
                     // Return as the payment is COMPLETE.
                     return $payment;
                 }
             }
-            $paymentMgs = esc_html__('Unknown error. Please contact admin.', 'event_espresso');
+            $payment_mgs = esc_html__('Unknown error. Please contact admin.', 'event_espresso');
         }
 
         // Seems like something went wrong if we got here.
         return $this->setPaymentStatus(
             $payment,
-            $declinedStatus,
+            $payment_status['declined'],
             'Square payment ID: ' . $payment_response->id . ', status: ' . $payment_response->status,
-            $paymentMgs
+            $payment_mgs
         );
     }
 
@@ -405,14 +405,14 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      *
      * @param EEI_Payment     $payment
      * @param EEI_Transaction $transaction
-     * @param array           $paymentStatus
+     * @param array           $payment_status
      * @param string          $customer_id
      * @return string
      */
     public function getOrderId(
         EEI_Payment $payment,
         EEI_Transaction $transaction,
-        array $paymentStatus,
+        array $payment_status,
         string $customer_id
     ): string {
         // Do we already have an order ID ?
@@ -425,7 +425,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
                 if (is_array($order) && isset($order['error'])) {
                     $error_message = (string) $order['error']['message'];
                     $order_error = esc_html__('No order created !', 'event_espresso');
-                    return $this->setPaymentStatus($payment, $paymentStatus['failed'], $order_error, $error_message);
+                    return $this->setPaymentStatus($payment, $payment_status['failed'], $order_error, $error_message);
                 }
                 $order_id = $order->id;
                 // Associate the Order with this transaction.
