@@ -151,7 +151,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
          * Save the permissions scope. Used for checking the permissions before using the API.
          * @since $VID:$
          */
-        $square_pm->update_extra_meta(Domain::META_KEY_PERMISSIONS, Domain::PERMISSIONS_SCOPE);
+        $square_pm->update_extra_meta(Domain::META_KEY_PERMISSIONS, Domain::PERMISSIONS_SCOPE_ALL);
 
         $refresh_token = EED_SquareOnsiteOAuth::encryptString(
             sanitize_text_field($_GET[ Domain::META_KEY_REFRESH_TOKEN ]),
@@ -182,7 +182,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @throws InvalidInterfaceException
      * @throws InvalidDataTypeException
      * @throws EE_Error
-     * @throws ReflectionException
      */
     public static function getConnectionData()
     {
@@ -218,7 +217,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $request_url = add_query_arg(
             [
                 'return_url' => rawurlencode($redirect_uri),
-                'scope'      => urlencode(Domain::PERMISSIONS_SCOPE),
+                'scope'      => urlencode(Domain::PERMISSIONS_SCOPE_ALL),
                 'modal'      => true
             ],
             EED_SquareOnsiteOAuth::getMiddlemanBaseUrl($square) . 'forward'

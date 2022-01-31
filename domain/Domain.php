@@ -97,15 +97,15 @@ class Domain
     /**
      * The default required permissions scope to be able to use all the API methods needed by this add-on.
      */
-    public const MINIMAL_PERMISSIONS_SCOPE = 'PAYMENTS_WRITE PAYMENTS_READ ORDERS_WRITE ORDERS_READ MERCHANT_PROFILE_READ';
+    public const PERMISSIONS_SCOPE_MINIMAL = 'PAYMENTS_WRITE PAYMENTS_READ ORDERS_WRITE ORDERS_READ MERCHANT_PROFILE_READ';
 
     /**
      * Customers API required permissions.
      */
-    public const CUSTOMERS_PERMISSIONS_SCOPE = 'CUSTOMERS_READ CUSTOMERS_WRITE';
+    public const PERMISSIONS_SCOPE_CUSTOMERS = 'CUSTOMERS_READ CUSTOMERS_WRITE';
 
     /**
      * The default required permissions scope to be able to use all the API methods needed by this add-on.
      */
-    public const PERMISSIONS_SCOPE = self::MINIMAL_PERMISSIONS_SCOPE . ' ' . self::CUSTOMERS_PERMISSIONS_SCOPE;
+    public const PERMISSIONS_SCOPE_ALL = self::PERMISSIONS_SCOPE_MINIMAL . ' ' . self::PERMISSIONS_SCOPE_CUSTOMERS;
 }

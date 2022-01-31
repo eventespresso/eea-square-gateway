@@ -91,7 +91,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         $customer_id    = '';
         // Check if we have the correct permissions before we try to use the API.
         $oauth_permissions = $payment_method->get_extra_meta(Domain::META_KEY_PERMISSIONS, true);
-        if ($oauth_permissions && strpos($oauth_permissions, Domain::CUSTOMERS_PERMISSIONS_SCOPE) !== false) {
+        if ($oauth_permissions && strpos($oauth_permissions, Domain::PERMISSIONS_SCOPE_CUSTOMERS) !== false) {
             // Get the Customer ID.
             $customer_id = $this->getCustomerId($transaction, $billing_info);
         }
