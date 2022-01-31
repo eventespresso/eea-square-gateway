@@ -4,6 +4,7 @@ use EventEspresso\Square\api\customers\CustomersApi;
 use EventEspresso\Square\api\order\CreateOrder;
 use EventEspresso\Square\api\payment\PaymentApi;
 use EventEspresso\Square\api\SquareApi;
+use EventEspresso\Square\domain\Domain;
 
 /**
  * Class EEG_SquareOnsite
@@ -79,16 +80,21 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         $payment_status['declined'] = $this->_pay_model->declined_status();
         // A default error message just in case.
         $payment_mgs = esc_html__('Unrecognized Error.', 'event_espresso');
-
         // Check the payment.
         $isValidPayment = $this->isPaymentValid($payment, $billing_info);
         if ($isValidPayment->details() === 'error' && $isValidPayment->status() === $payment_status['failed']) {
             return $isValidPayment;
         }
-        $transaction = $payment->transaction();
 
-        // Get the Customer ID.
-        $customer_id = $this->getCustomerId($transaction, $billing_info);
+        $transaction    = $payment->transaction();
+        $payment_method = $transaction->payment_method();
+        $customer_id    = '';
+        // Check if we have the correct permissions before we try to use the API.
+        $oauth_permissions = $payment_method->get_extra_meta(Domain::META_KEY_PERMISSIONS, true);
+        if ($oauth_permissions && strpos($oauth_permissions, Domain::CUSTOMERS_PERMISSIONS_SCOPE) !== false) {
+            // Get the Customer ID.
+            $customer_id = $this->getCustomerId($transaction, $billing_info);
+        }
         // Get the order ID.
         $order_id = $this->getOrderId($payment, $transaction, $payment_status, $customer_id);
 

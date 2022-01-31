@@ -147,6 +147,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
             Domain::META_KEY_APPLICATION_ID,
             sanitize_text_field($_GET[ Domain::META_KEY_APPLICATION_ID ])
         );
+        /**
+         * Save the permissions scope. Used for checking the permissions before using the API.
+         * @since $VID:$
+         */
+        $square_pm->update_extra_meta(Domain::META_KEY_PERMISSIONS, Domain::PERMISSIONS_SCOPE);
+
         $refresh_token = EED_SquareOnsiteOAuth::encryptString(
             sanitize_text_field($_GET[ Domain::META_KEY_REFRESH_TOKEN ]),
             $square_pm->debug_mode()
@@ -176,6 +182,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @throws InvalidInterfaceException
      * @throws InvalidDataTypeException
      * @throws EE_Error
+     * @throws ReflectionException
      */
     public static function getConnectionData()
     {
@@ -185,7 +192,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             echo wp_json_encode(['squareError' => $errMsg]);
             exit();
         }
-        $squareSlug = sanitize_key($_POST['submittedPm']);
+        $square_slug = sanitize_key($_POST['submittedPm']);
         // Just save the debug mode option if it was changed..
         // It simplifies the rest of this process. PM settings might also not be saved after the OAuth process.
         if (
@@ -197,25 +204,21 @@ class EED_SquareOnsiteOAuth extends EED_Module
         }
         $nonce = wp_create_nonce('eea_square_grab_access_token');
         // OAuth return handler.
-        $redirectUri = add_query_arg(
+        $redirect_uri = add_query_arg(
             [
                 'webhook_action'           => 'eea_square_grab_access_token',
-                'square_slug'              => $squareSlug,
+                'square_slug'              => $square_slug,
                 'nonce'                    => $nonce,
                 Domain::META_KEY_LIVE_MODE => $square->debug_mode() ? '0' : '1',
             ],
             site_url()
         );
         // Request URL should look something like:
-        // @codingStandardsIgnoreStart
         // https://connect.eventespresso.dev/squarepayments/forward?return_url=http%253A%252F%252Fsrc.wordpress-develop.dev%252Fwp-admin%252Fadmin.php%253Fpage%253Dwc-settings%2526amp%253Btab%253Dintegration%2526amp%253Bsection%253Dsquareconnect%2526amp%253Bwc_square_token_nonce%253D6585f05708&scope=read_write
-        // @codingStandardsIgnoreEnd
         $request_url = add_query_arg(
             [
-                'return_url' => rawurlencode($redirectUri),
-                'scope'      => urlencode(
-                    'PAYMENTS_WRITE PAYMENTS_READ ORDERS_WRITE ORDERS_READ MERCHANT_PROFILE_READ CUSTOMERS_READ CUSTOMERS_WRITE'
-                ),
+                'return_url' => rawurlencode($redirect_uri),
+                'scope'      => urlencode(Domain::PERMISSIONS_SCOPE),
                 'modal'      => true
             ],
             EED_SquareOnsiteOAuth::getMiddlemanBaseUrl($square) . 'forward'
