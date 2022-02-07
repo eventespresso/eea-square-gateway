@@ -492,7 +492,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * Refresh the access token.
      *
      * @param EE_Payment_Method $squarePm
-     * @return void
+     * @return bool
      * @throws InvalidArgumentException
      * @throws InvalidInterfaceException
      * @throws InvalidDataTypeException
@@ -500,12 +500,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @throws ReflectionException
      * @throws Exception
      */
-    public static function refreshToken(EE_Payment_Method $squarePm)
+    public static function refreshToken(EE_Payment_Method $squarePm): bool
     {
         $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         if (! isset($squareData[ Domain::META_KEY_REFRESH_TOKEN ]) || ! $squareData[ Domain::META_KEY_REFRESH_TOKEN ]) {
             $errMsg = esc_html__('Could not find the refresh token.', 'event_espresso');
-            EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, $squareData, false);
+            return EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, $squareData, false);
         }
         $squareRefreshToken = EED_SquareOnsiteOAuth::decryptString(
             $squareData[ Domain::META_KEY_REFRESH_TOKEN ],
@@ -535,11 +535,11 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $response = wp_remote_post($postUrl, $postArgs);
 
         if (is_wp_error($response)) {
-            EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $response->get_error_message(), [], false);
+            return EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $response->get_error_message(), [], false);
         } else {
             $responseBody = (isset($response['body']) && $response['body']) ? json_decode($response['body']) : false;
             if (
-                $responseBody === false
+                ! $responseBody
                 || (
                     isset($responseBody->error)
                     && strpos($responseBody->error_description, 'This application is not connected') === false
@@ -550,11 +550,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 } else {
                     $errMsg = esc_html__('Unknown response received!', 'event_espresso');
                 }
-                EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, (array) $responseBody, false);
+                return EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, (array) $responseBody, false);
             }
 
             if (
-                ! wp_verify_nonce($responseBody->nonce, 'eea_square_refresh_access_token')
+                empty($responseBody->nonce)
+                || ! wp_verify_nonce($responseBody->nonce, 'eea_square_refresh_access_token')
                 || empty($responseBody->expires_at)
                 || empty($responseBody->application_id)
                 || empty($responseBody->access_token)
@@ -563,7 +564,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             ) {
                 // This is an error.
                 $errMsg = esc_html__('Could not get the refresh token and/or other parameters.', 'event_espresso');
-                EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, (array) $responseBody, false);
+                return EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, (array) $responseBody, false);
             }
 
             // log the response, don't exit
@@ -606,7 +607,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             $locationsList = EED_SquareOnsiteOAuth::updateLocationsList($squarePm);
             // Did we really get an error ?
             if (isset($locationsList['error'])) {
-                EED_SquareOnsiteOAuth::errorLogAndExit(
+                return EED_SquareOnsiteOAuth::errorLogAndExit(
                     $squarePm,
                     $locationsList['error']['message'],
                     (array) $locationsList,
@@ -617,6 +618,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             // And update the location ID if not set.
             EED_SquareOnsiteOAuth::updateLocation($squarePm, $locationsList);
         }
+        return true;
     }
 
 
@@ -837,15 +839,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     private static function cleanDataArray(array $data): array
     {
-        $sensitive_data = [
-            'access_token'  => '',
-            'refresh_token' => '',
-            'nonce'         => '',
-        ];
+        $sensitive_data = ['access_token', 'refresh_token', 'nonce'];
         foreach ($data as $key => $value) {
-            $data[ $key ] = is_array($value) ? EED_SquareOnsiteOAuth::cleanDataArray($value) : $value;
+            $value = is_array($value) ? EED_SquareOnsiteOAuth::cleanDataArray($value) : $value;
+            $data[ $key ] = in_array($key, $sensitive_data) ? '***' : $value;
         }
-        return array_diff_key($data, $sensitive_data);
+        return $data;
     }
 
 
@@ -858,7 +857,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @param bool                      $echo_json_and_exit Should we echo json and exit
      * @param bool                      $using_oauth
      * @param bool                      $show_alert Tells frontend to show an alert or not
-     * @return void
+     * @return bool
      * @throws EE_Error
      */
     public static function errorLogAndExit(
@@ -868,7 +867,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         bool $echo_json_and_exit = true,
         bool $using_oauth = false,
         bool $show_alert = false
-    ) {
+    ): bool {
         $default_msg = 'Square error';
         if ($square_pm instanceof EE_Payment_Method) {
             if ($data) {
@@ -889,6 +888,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 self::echoJsonError($err_msg, $show_alert);
             }
         }
+        // Yes, simply always return true.
+        return true;
     }
 
 
