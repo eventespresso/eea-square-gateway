@@ -416,11 +416,16 @@ class SettingsForm extends EE_Payment_Method_Form
     private function registerBlogDomain(EE_Payment_Method $pmInstance)
     {
         try {
-            $response = EED_SquareOnsiteOAuth::registerDomain($pmInstance);
-            if (! empty($response['status'])) {
-                // save the status
-                $this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ] = $response['status'];
-                $pmInstance->update_extra_meta(Domain::META_KEY_SQUARE_DATA, $this->squareData);
+            if (
+                empty($this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ])
+                || $this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ] !== 'VERIFIED'
+            ){
+                $response = EED_SquareOnsiteOAuth::registerDomain($pmInstance);
+                if (! empty($response['status'])) {
+                    // save the status
+                    $this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ] = $response['status'];
+                    $pmInstance->update_extra_meta(Domain::META_KEY_SQUARE_DATA, $this->squareData);
+                }
             }
         } catch (EE_Error | ReflectionException $e) {
             // No action required here in this case.
