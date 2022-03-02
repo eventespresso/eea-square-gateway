@@ -842,7 +842,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $sensitive_data = ['access_token', 'refresh_token', 'nonce'];
         foreach ($data as $key => $value) {
             $value = is_array($value) ? EED_SquareOnsiteOAuth::cleanDataArray($value) : $value;
-            if(in_array($key, $sensitive_data)) {
+            if (in_array($key, $sensitive_data)) {
                 $data[$key] = empty($value) ? '**empty**' : '**hidden**';
             }
         }
