@@ -723,7 +723,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             // Throttle the requests a bit.
             $now = new DateTime('now');
             $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
-            if (isset($squareData[ Domain::META_KEY_THROTTLE_TIME ]) && $squareData[ Domain::META_KEY_THROTTLE_TIME ]) {
+            if (!empty($squareData[ Domain::META_KEY_THROTTLE_TIME ])) {
                 $throttleTime = new DateTime($squareData[ Domain::META_KEY_THROTTLE_TIME ]);
                 $lastChecked = $now->diff($throttleTime)->format('%a');
                 // Throttle, allowing only once per 2 days.
@@ -735,7 +735,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             $squarePm->update_extra_meta(Domain::META_KEY_SQUARE_DATA, $squareData);
 
             // Now check the token's validation date.
-            if (isset($squareData[ Domain::META_KEY_EXPIRES_AT ]) && $squareData[ Domain::META_KEY_EXPIRES_AT ]) {
+            if (!empty($squareData[ Domain::META_KEY_EXPIRES_AT ])) {
                 $expiresAt = new DateTime($squareData[ Domain::META_KEY_EXPIRES_AT ]);
                 $timeLeft = $now->diff($expiresAt);
                 $daysLeft = $timeLeft->format('%a');
