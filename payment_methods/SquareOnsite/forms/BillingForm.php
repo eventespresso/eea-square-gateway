@@ -3,7 +3,10 @@
 namespace EventEspresso\Square\payment_methods\SquareOnsite\forms;
 
 use EE_Billing_Attendee_Info_Form;
+use EE_Checkbox_Multi_Input;
+use EE_Div_Per_Section_Layout;
 use EE_Error;
+use EE_Form_Section_Base;
 use EE_Form_Section_HTML;
 use EE_Form_Section_Proper;
 use EE_Hidden_Input;
@@ -107,6 +110,7 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
                 'html_id' => 'square-onsite-billing-form',
                 'html_class' => 'squareOnsite_billingForm',
                 'subsections' => [
+                    'consent_box'      => $this->consentBox(),
                     'debug_content'    => $this->addDebugContent($paymentMethod),
                     'square_pm_form'   => $this->squareEmbeddedForm(),
                     'eea_square_token' => new EE_Hidden_Input([
@@ -131,10 +135,10 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
      * Possibly adds debug content to Square billing form.
      *
      * @param EE_Payment_Method $paymentMethod
-     * @return EE_Form_Section_Proper
+     * @return EE_Form_Section_Base
      * @throws EE_Error
      */
-    public function addDebugContent(EE_Payment_Method $paymentMethod)
+    public function addDebugContent(EE_Payment_Method $paymentMethod): EE_Form_Section_Base
     {
         if ($paymentMethod->debug_mode()) {
             return new EE_Form_Section_Proper([
@@ -154,7 +158,7 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
      * @return EE_Form_Section_Proper
      * @throws EE_Error
      */
-    public function squareEmbeddedForm()
+    public function squareEmbeddedForm(): EE_Form_Section_Proper
     {
         $template_args = [];
         return new EE_Form_Section_Proper([
@@ -162,6 +166,38 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
                 'layout_template_file' => $this->template_path . 'squareEmbeddedForm.template.php',
                 'template_args'        => $template_args
             ])
+        ]);
+    }
+
+
+    /**
+     * Form the consent box contents.
+     *
+     * @return EE_Form_Section_Base
+     * @throws EE_Error
+     */
+    public function consentBox(): EE_Form_Section_Base
+    {
+        return new EE_Form_Section_Proper([
+            'layout_strategy' => new EE_Div_Per_Section_Layout(),
+            'subsections' => [
+                'consent' => new EE_Checkbox_Multi_Input(
+                    [
+                        'consent' => esc_html__(
+                            'Allow Square to store my contact information.',
+                            'event_espresso'
+                        ),
+                    ],
+                    [
+                        'required' => true,
+                        'required_validation_error_message' => esc_html__(
+                            'You must consent to these terms in order to proceed with the registration.',
+                            'event_espresso'
+                        ),
+                        'html_label_text' => '',
+                    ]
+                ),
+            ]
         ]);
     }
 
