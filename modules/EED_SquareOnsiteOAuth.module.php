@@ -713,23 +713,30 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * Checks if the token can/should be refreshed and requests a new one if required.
      *
      * @param EE_Payment_Method $squarePm
+     * @param bool $forceRefresh
      * @return boolean
      * @throws EE_Error
      * @throws ReflectionException
      * @throws Exception
      */
-    public static function checkAndRefreshToken($squarePm): bool
+    public static function checkAndRefreshToken(EE_Payment_Method $squarePm, bool $forceRefresh = false): bool
     {
         // Check if OAuthed first.
         if (EED_SquareOnsiteOAuth::isAuthenticated($squarePm)) {
+            // Is this a force refresh ?
+            if ($forceRefresh) {
+                return EED_SquareOnsiteOAuth::refreshToken($squarePm);
+            }
+
             // Throttle the requests a bit.
             $now = new DateTime('now');
             $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
-            if (!empty($squareData[ Domain::META_KEY_THROTTLE_TIME ])) {
+            if (! empty($squareData[ Domain::META_KEY_THROTTLE_TIME ])) {
                 $throttleTime = new DateTime($squareData[ Domain::META_KEY_THROTTLE_TIME ]);
-                $lastChecked = $now->diff($throttleTime)->format('%a');
-                // Throttle, allowing only once per 2 days.
-                if (intval($lastChecked) < 2) {
+                $lastChecked  = $now->diff($throttleTime)->format('%i');
+
+                // Throttle, allowing only once per hour.
+                if (intval($lastChecked) < 60) {
                     return false;
                 }
             }
@@ -737,19 +744,60 @@ class EED_SquareOnsiteOAuth extends EED_Module
             $squarePm->update_extra_meta(Domain::META_KEY_SQUARE_DATA, $squareData);
 
             // Now check the token's validation date.
-            if (!empty($squareData[ Domain::META_KEY_EXPIRES_AT ])) {
+            if (! empty($squareData[ Domain::META_KEY_EXPIRES_AT ])) {
                 $expiresAt = new DateTime($squareData[ Domain::META_KEY_EXPIRES_AT ]);
-                $timeLeft = $now->diff($expiresAt);
-                $daysLeft = $timeLeft->format('%a');
+                $daysLeft  = $now->diff($expiresAt)->format('%a');
 
-                // Refresh the token on a 6th day or up.
+                // Refresh the token on a 6th day or up, assuming that expiration frame in 30 days.
                 if (intval($daysLeft) <= 24) {
-                    EED_SquareOnsiteOAuth::refreshToken($squarePm);
-                    return true;
+                    return EED_SquareOnsiteOAuth::refreshToken($squarePm);
                 }
             }
         }
         return false;
+    }
+
+
+    /**
+     * Checks if the OAuth credentials are still healthy and that we are authorized.
+     *
+     * @param  EE_Payment_Method $pmInstance
+     * @return array ['healthy' => true] | ['error' => ['message' => 'the_message', 'code' => 'the_code']]
+     */
+    public static function oauthHealthCheck(EE_Payment_Method $pmInstance): array
+    {
+        $error = [
+            'error' => [
+                'code'    => 'NO_ACCESS_TOKEN',
+                'message' => esc_html__('One or more authentication parameters are missing', 'event_espresso')
+            ]
+        ];
+        // Double check main oAuth parameters.
+        try {
+            $access_token = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, '');
+            $app_id       = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true, '');
+        } catch (EE_Error | ReflectionException $e) {
+            return $error;
+        }
+        if (! $access_token || ! $app_id) {
+            return $error;
+        }
+
+        // Request a list of locations to check API requests.
+        $locations = EED_SquareOnsiteOAuth::getMerchantLocations($pmInstance);
+        if (is_array($locations) && isset($locations['error'])) {
+            switch ($locations['error']['code']) {
+                case 'ACCESS_TOKEN_EXPIRED':
+                case 'ACCESS_TOKEN_REVOKED':
+                case 'INSUFFICIENT_SCOPES':
+                    // We have an error. Put it under NOT_AUTHORIZED category for easy identification.
+                    $locations['error']['code'] = 'NOT_AUTHORIZED';
+                    return $locations;
+                default:
+                    return $locations;
+            }
+        }
+        return ['healthy' => true];
     }
 
 
