@@ -69,8 +69,6 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
      */
     public function __construct(EE_Payment_Method $paymentMethod, array $options = [])
     {
-        // Check the token and refresh if needed.
-        EED_SquareOnsiteOAuth::checkAndRefreshToken($paymentMethod);
         // Don't initiate if there's no transaction.
         // This may occur on a partial payment when a PM page is loaded without Square (or any other payment) select.
         if (isset($options['transaction']) && $options['transaction'] instanceof EE_Transaction) {

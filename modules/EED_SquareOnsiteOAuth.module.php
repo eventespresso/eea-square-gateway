@@ -50,6 +50,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
         if (EE_Maintenance_Mode::instance()->models_can_query()) {
             // A hook to handle the process after the return from Square website.
             add_action('init', [__CLASS__, 'requestAccess'], 20);
+            // The health check admin notice.
+            self::scheduleCronEvents();
         }
     }
 
@@ -71,6 +73,11 @@ class EED_SquareOnsiteOAuth extends EED_Module
             add_action('wp_ajax_squareRequestDisconnect', [__CLASS__, 'disconnectAccount']);
             // register domain with Apple Pay
             add_action('wp_ajax_squareRegisterDomain', [__CLASS__, 'registerDomainAjax']);
+            $user_id     = get_current_user_id();
+            $show_notice = get_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, true);
+            if ($show_notice) {
+                add_action('admin_notices', [__CLASS__, 'healthCheckFailNotice']);
+            }
         }
     }
 
@@ -733,22 +740,9 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 return EED_SquareOnsiteOAuth::refreshToken($squarePm);
             }
 
-            // Throttle the requests a bit.
+            // Check the token's validation date.
             $now = new DateTime('now');
             $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
-            if (! empty($squareData[ Domain::META_KEY_THROTTLE_TIME ])) {
-                $throttleTime = new DateTime($squareData[ Domain::META_KEY_THROTTLE_TIME ]);
-                $lastChecked  = $now->diff($throttleTime)->format('%i');
-
-                // Throttle, allowing only once per hour.
-                if (intval($lastChecked) < 60) {
-                    return false;
-                }
-            }
-            $squareData[ Domain::META_KEY_THROTTLE_TIME ] = date("Y-m-d H:i:s");
-            $squarePm->update_extra_meta(Domain::META_KEY_SQUARE_DATA, $squareData);
-
-            // Now check the token's validation date.
             if (! empty($squareData[ Domain::META_KEY_EXPIRES_AT ])) {
                 $expiresAt = new DateTime($squareData[ Domain::META_KEY_EXPIRES_AT ]);
                 $daysLeft  = $now->diff($expiresAt)->format('%a');
@@ -993,5 +987,81 @@ class EED_SquareOnsiteOAuth extends EED_Module
             'alert'       => $show_alert,
         ]);
         exit();
+    }
+
+
+    /**
+     * Admin notice about the health check fail.
+     *
+     * @return void
+     */
+    public static function healthCheckFailNotice()
+    {
+        echo '<div class="error"><p>'
+             . sprintf(
+                 esc_html__(
+                     '%1$s Event Espresso Square %2$s payment method failed the authorization health check! Please try to re-authorize (reConnect) for the Square payment method to function properly.',
+                     'event_espresso'
+                 ),
+                 '<strong>',
+                 '</strong>'
+             )
+             . '</p></div>';
+    }
+
+
+    /**
+     * Schedule cron events here.
+     *
+     * @return void
+     */
+    public static function scheduleCronEvents()
+    {
+        // API health check event.
+        if (! wp_next_scheduled(Domain::CRON_EVENT_HEALTH_CHECK)) {
+            // Should update every 24 hours.
+            wp_schedule_event(time(), 'twicedaily', Domain::CRON_EVENT_HEALTH_CHECK);
+        }
+        add_action(Domain::CRON_EVENT_HEALTH_CHECK, [__CLASS__, 'scheduledHealthCheck']);
+    }
+
+
+    /**
+     * Schedule the health check.
+     *
+     * @return void
+     * @throws EE_Error
+     * @throws ReflectionException
+     */
+    public static function scheduledHealthCheck()
+    {
+        // Get all active Square payment methods, as with payment methods pro you can activate few.
+        $active_payment_methods = EEM_Payment_Method::instance()->get_all_active();
+        foreach ($active_payment_methods as $payment_method) {
+            if (strpos($payment_method->slug(), 'square') !== false) {
+                $square_data = $payment_method->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true, []);
+                if (isset($square_data[ Domain::META_KEY_USING_OAUTH ])
+                    && $square_data[ Domain::META_KEY_USING_OAUTH ]
+                ) {
+                    $user_id = get_current_user_id();
+                    // First check the token and refresh if it's time to.
+                    EED_SquareOnsiteOAuth::checkAndRefreshToken($payment_method);
+                    // Check the credentials and the API connection.
+                    $oauthHealthCheck = EED_SquareOnsiteOAuth::oauthHealthCheck($payment_method);
+                    if (isset($oauthHealthCheck['error'])) {
+                        // Try a force refresh.
+                        $refreshed = EED_SquareOnsiteOAuth::checkAndRefreshToken($payment_method, true);
+                        // If we still have an error display it to the admin and continue using the "old" oauth key.
+                        if (! $refreshed) {
+                            // Add an admin notice.
+                            update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, true);
+                        }
+                    } else {
+                        // Disable the admin notice.
+                        update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, false);
+                    }
+                }
+            }
+        }
     }
 }

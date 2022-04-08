@@ -105,28 +105,28 @@ class SettingsForm extends EE_Payment_Method_Form
         if (isset($this->squareData[ Domain::META_KEY_USING_OAUTH ])
             && $this->squareData[ Domain::META_KEY_USING_OAUTH ]
         ) {
-            // First check the token and refresh if it's time to.
-            EED_SquareOnsiteOAuth::checkAndRefreshToken($pmInstance);
+            $user_id = get_current_user_id();
             // Check the credentials and the API connection.
             $oauthHealthCheck = EED_SquareOnsiteOAuth::oauthHealthCheck($pmInstance);
             if (isset($oauthHealthCheck['error'])) {
-                // Try a force refresh.
-                $refreshed = EED_SquareOnsiteOAuth::checkAndRefreshToken($pmInstance, true);
-                // If we still have an error display it to the admin and continue using the "old" oauth key.
-                if (! $refreshed) {
-                    EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'OAuth error', $oauthHealthCheck, false);
-                    $this->add_validation_error(
-                        sprintf(
-                            // translators: %1$s: the error message.
-                            esc_html__(
-                                'Authorization health check failed with error: "%1$s" Please try to re-authorize (reConnect) for the Square payment method to function properly.',
-                                'event_espresso'
-                            ),
-                            $oauthHealthCheck['error']['message']
+                // If we have an error display it to the admin but continue using the "old" oauth key.
+                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'OAuth error', $oauthHealthCheck, false);
+                $this->add_validation_error(
+                    sprintf(
+                        // translators: %1$s: the error message.
+                        esc_html__(
+                            'Authorization health check failed with error: "%1$s" Please try to re-authorize (reConnect) for the Square payment method to function properly.',
+                            'event_espresso'
                         ),
-                        'eea_square_oauth_connection_reset_request'
-                    );
-                }
+                        $oauthHealthCheck['error']['message']
+                    ),
+                    'eea_square_oauth_connection_reset_request'
+                );
+                // Also add an admin notice.
+                update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, true);
+            } else {
+                // Disable admin error notice by default.
+                update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, false);
             }
         }
     }
