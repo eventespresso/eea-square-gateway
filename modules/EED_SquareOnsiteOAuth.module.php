@@ -1000,7 +1000,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         echo '<div class="error"><p>'
              . sprintf(
                  esc_html__(
-                     '%1$s Event Espresso Square %2$s payment method failed the authorization health check! Please try to re-authorize (reConnect) for the Square payment method to function properly.',
+                     '%1$s Event Espresso Square %2$s payment method failed the authorization health check! Please try to re-authorize (reconnect) for the Square payment method to function properly.',
                      'event_espresso'
                  ),
                  '<strong>',
@@ -1019,7 +1019,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
     {
         // API health check event.
         if (! wp_next_scheduled(Domain::CRON_EVENT_HEALTH_CHECK)) {
-            // Should update every 24 hours.
+            // Should check to update twice a day.
             wp_schedule_event(time(), 'twicedaily', Domain::CRON_EVENT_HEALTH_CHECK);
         }
         add_action(Domain::CRON_EVENT_HEALTH_CHECK, [__CLASS__, 'scheduledHealthCheck']);
