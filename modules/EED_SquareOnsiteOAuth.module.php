@@ -1036,6 +1036,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
     public static function scheduledHealthCheck()
     {
         // Get all active Square payment methods, as with payment methods pro you can activate few.
+        $user_id = get_current_user_id();
         $active_payment_methods = EEM_Payment_Method::instance()->get_all_active();
         foreach ($active_payment_methods as $payment_method) {
             if (strpos($payment_method->slug(), 'square') !== false) {
@@ -1043,7 +1044,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 if (isset($square_data[ Domain::META_KEY_USING_OAUTH ])
                     && $square_data[ Domain::META_KEY_USING_OAUTH ]
                 ) {
-                    $user_id = get_current_user_id();
                     // First check the token and refresh if it's time to.
                     EED_SquareOnsiteOAuth::checkAndRefreshToken($payment_method);
                     // Check the credentials and the API connection.
