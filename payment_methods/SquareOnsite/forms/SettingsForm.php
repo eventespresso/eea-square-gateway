@@ -123,10 +123,10 @@ class SettingsForm extends EE_Payment_Method_Form
                     'eea_square_oauth_connection_reset_request'
                 );
                 // Also add an admin notice.
-                update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, $pmInstance->slug());
+                update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_CHECK, $pmInstance->slug());
             } else {
                 // Disable admin error notice by default.
-                update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, '');
+                update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_CHECK, '');
             }
         }
     }

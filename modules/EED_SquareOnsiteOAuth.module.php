@@ -995,7 +995,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
     public static function healthCheckFailNotice()
     {
         $user_id = get_current_user_id();
-        $pm_slug = get_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, true);
+        $pm_slug = get_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_CHECK, true);
         // No PM to notice ? No admin notice.
         if (! $pm_slug) {
             return;
@@ -1066,11 +1066,11 @@ class EED_SquareOnsiteOAuth extends EED_Module
                     // If we still have an error display it to the admin and continue using the "old" oauth key.
                     if (! $refreshed) {
                         // Add an admin notice.
-                        update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, $payment_method->slug());
+                        update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_CHECK, $payment_method->slug());
                     }
                 } else {
                     // Disable the admin notice.
-                    update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, '');
+                    update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_CHECK, '');
                 }
             }
         }

@@ -20,7 +20,7 @@ class Domain
     /*
      * Holds the name of the health check fail admin notice.
      */
-    public const ADMIN_NOTICE_HEALTH_FAIL = 'eea_square_health_check_fail_notice';
+    public const ADMIN_NOTICE_HEALTH_CHECK = 'eea_square_health_check_fail_notice';
 
     /*
      * Holds the name of the cron hook that does a health check.
