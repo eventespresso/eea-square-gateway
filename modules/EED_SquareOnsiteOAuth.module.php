@@ -73,11 +73,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
             add_action('wp_ajax_squareRequestDisconnect', [__CLASS__, 'disconnectAccount']);
             // register domain with Apple Pay
             add_action('wp_ajax_squareRegisterDomain', [__CLASS__, 'registerDomainAjax']);
-            $user_id     = get_current_user_id();
-            $show_notice = get_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, true);
-            if ($show_notice) {
-                add_action('admin_notices', [__CLASS__, 'healthCheckFailNotice']);
-            }
+            // oAuth health check admin notice.
+            add_action('admin_notices', [__CLASS__, 'healthCheckFailNotice']);
         }
     }
 
@@ -997,9 +994,16 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function healthCheckFailNotice()
     {
+        $user_id = get_current_user_id();
+        $pm_slug = get_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, true);
+        // No PM to notice ? No admin notice.
+        if (! $pm_slug) {
+            return;
+        }
+
         $pm_settings_page = get_admin_url(
             get_current_blog_id(),
-            'admin.php?page=espresso_payment_settings&payment_method=squareonsite'
+            'admin.php?page=espresso_payment_settings&payment_method=' . $pm_slug
         );
         echo '<div class="error"><p>'
              . sprintf(
@@ -1043,29 +1047,30 @@ class EED_SquareOnsiteOAuth extends EED_Module
     {
         // Get all active Square payment methods, as with payment methods pro you can activate few.
         $user_id = get_current_user_id();
-        $active_payment_methods = EEM_Payment_Method::instance()->get_all_active();
+        $active_payment_methods = EEM_Payment_Method::instance()->get_all_active(
+            EEM_Payment_Method::scope_cart,
+            [['PMD_slug' => ['LIKE', '%square%']]]
+        );
         foreach ($active_payment_methods as $payment_method) {
-            if (strpos($payment_method->slug(), 'square') !== false) {
-                $square_data = $payment_method->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true, []);
-                if (isset($square_data[ Domain::META_KEY_USING_OAUTH ])
-                    && $square_data[ Domain::META_KEY_USING_OAUTH ]
-                ) {
-                    // First check the token and refresh if it's time to.
-                    EED_SquareOnsiteOAuth::checkAndRefreshToken($payment_method);
-                    // Check the credentials and the API connection.
-                    $oauthHealthCheck = EED_SquareOnsiteOAuth::oauthHealthCheck($payment_method);
-                    if (isset($oauthHealthCheck['error'])) {
-                        // Try a force refresh.
-                        $refreshed = EED_SquareOnsiteOAuth::checkAndRefreshToken($payment_method, true);
-                        // If we still have an error display it to the admin and continue using the "old" oauth key.
-                        if (! $refreshed) {
-                            // Add an admin notice.
-                            update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, true);
-                        }
-                    } else {
-                        // Disable the admin notice.
-                        update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, false);
+            $square_data = $payment_method->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true, []);
+            if (isset($square_data[ Domain::META_KEY_USING_OAUTH ])
+                && $square_data[ Domain::META_KEY_USING_OAUTH ]
+            ) {
+                // First check the token and refresh if it's time to.
+                EED_SquareOnsiteOAuth::checkAndRefreshToken($payment_method);
+                // Check the credentials and the API connection.
+                $oauth_health_check = EED_SquareOnsiteOAuth::oauthHealthCheck($payment_method);
+                if (isset($oauth_health_check['error'])) {
+                    // Try a force refresh.
+                    $refreshed = EED_SquareOnsiteOAuth::checkAndRefreshToken($payment_method, true);
+                    // If we still have an error display it to the admin and continue using the "old" oauth key.
+                    if (! $refreshed) {
+                        // Add an admin notice.
+                        update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, $payment_method->slug());
                     }
+                } else {
+                    // Disable the admin notice.
+                    update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_FAIL, '');
                 }
             }
         }
