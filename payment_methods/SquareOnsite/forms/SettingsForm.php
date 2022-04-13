@@ -159,7 +159,7 @@ class SettingsForm extends EE_Payment_Method_Form
             EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $this->squareData, false);
             $this->add_validation_error(
                 sprintf(
-                    // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
+                    // translators: %1$s: opening strong html tag. %2$s: closing strong html tag.
                     esc_html__(
                         '%1$sSquare Payment Method%2$s is in debug mode but the authentication with %1$sSquare%2$s is in Live mode. Payments will not be processed correctly! If you wish to test this payment method, please reset the connection and use sandbox credentials to authenticate with Square.',
                         'event_espresso'
@@ -177,7 +177,7 @@ class SettingsForm extends EE_Payment_Method_Form
             EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $this->squareData, false);
             $this->add_validation_error(
                 sprintf(
-                    // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
+                    // translators: %1$s: opening strong html tag. %2$s: closing strong html tag.
                     esc_html__(
                         '%1$sSquare Payment Method%2$s is in live mode but the authentication with %1$sSquare%2$s is in sandbox mode. Payments will not be processed correctly! If you wish to process real payments with this payment method, please reset the connection and use live credentials to authenticate with Square.',
                         'event_espresso'

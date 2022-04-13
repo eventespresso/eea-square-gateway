@@ -75,9 +75,9 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
             if (! isset($options['template_path'])) {
                 throw new EE_Error(
                     sprintf(
-                        // translators: %1$s: EESquareOnsiteBillingForm. $2$s: Options template path.
+                        // translators: %1$s: EESquareOnsiteBillingForm. %2$s: Options template path.
                         esc_html__(
-                            '%1$s instantiated without the required template_path. Please provide it in $2$s',
+                            '%1$s instantiated without the required template_path. Please provide it in %2$s',
                             'event_espresso'
                         ),
                         __CLASS__,

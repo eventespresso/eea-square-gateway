@@ -997,14 +997,20 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function healthCheckFailNotice()
     {
+        $pm_settings_page = get_admin_url(
+            get_current_blog_id(),
+            'admin.php?page=espresso_payment_settings&payment_method=squareonsite'
+        );
         echo '<div class="error"><p>'
              . sprintf(
                  esc_html__(
-                     '%1$s Event Espresso Square %2$s payment method failed the authorization health check! Please try to re-authorize (reconnect) for the Square payment method to function properly.',
+                     '%1$s Event Espresso Square %2$s payment method failed the authorization health check! Please try to %3$sre-authorize (reconnect) for the Square payment method%4$s to function properly.',
                      'event_espresso'
                  ),
                  '<strong>',
-                 '</strong>'
+                 '</strong>',
+                 '<a href="' . $pm_settings_page. '">',
+                 '</a>'
              )
              . '</p></div>';
     }
