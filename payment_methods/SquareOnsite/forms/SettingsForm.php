@@ -8,6 +8,7 @@ use EE_PMT_SquareOnsite;
 use EE_Payment_Method;
 use EE_Select_Input;
 use EE_Yes_No_Input;
+use EED_OAuthHealthCheck;
 use EED_SquareOnsiteOAuth;
 use EventEspresso\Square\domain\Domain;
 use EE_Error;
@@ -107,10 +108,10 @@ class SettingsForm extends EE_Payment_Method_Form
         ) {
             $user_id = get_current_user_id();
             // Check the credentials and the API connection.
-            $oauthHealthCheck = EED_SquareOnsiteOAuth::oauthHealthCheck($pmInstance);
-            if (isset($oauthHealthCheck['error'])) {
+            $oauth_health_check = EED_OAuthHealthCheck::check($pmInstance);
+            if (isset($oauth_health_check['error'])) {
                 // If we have an error display it to the admin but continue using the "old" oauth key.
-                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'OAuth error', $oauthHealthCheck, false);
+                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'OAuth error', $oauth_health_check, false);
                 $this->add_validation_error(
                     sprintf(
                         // translators: %1$s: the error message.
@@ -118,7 +119,7 @@ class SettingsForm extends EE_Payment_Method_Form
                             'Authorization health check failed with error: "%1$s" Please try to re-authorize (reConnect) for the Square payment method to function properly.',
                             'event_espresso'
                         ),
-                        $oauthHealthCheck['error']['message']
+                        $oauth_health_check['error']['message']
                     ),
                     'eea_square_oauth_connection_reset_request'
                 );
