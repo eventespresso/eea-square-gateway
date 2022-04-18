@@ -189,9 +189,9 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
                         ),
                     ],
                     [
-                        'required' => true,
+                        'required' => false,
                         'required_validation_error_message' => esc_html__(
-                            'You must consent to these terms in order to proceed with the registration.',
+                            'This will allow Square to store your billing information as a Client entity.',
                             'event_espresso'
                         ),
                         'html_label_text' => '',
