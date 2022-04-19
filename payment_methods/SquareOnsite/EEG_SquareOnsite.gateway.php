@@ -465,10 +465,10 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         $customer_id = $transaction->get_extra_meta('customer_id', true, '');
         if (! $customer_id) {
             // Create a customer for this transaction.
-            $primary_registrant  = $transaction->primary_registration();
-            $customers_api       = $this->getCustomersApi($billing_info, $primary_registrant);
+            $primary_registrant = $transaction->primary_registration();
+            $customers_api      = $this->getCustomersApi($billing_info, $primary_registrant);
             // Search to see if this user already exists as a customer.
-            $found_customer      = $customers_api->findByEmail($billing_info['email']);
+            $found_customer     = $customers_api->findByEmail($billing_info['email']);
             if (! $found_customer) {
                 $customer = $customers_api->create();
                 if (is_object($customer)) {
@@ -481,6 +481,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         }
         // Associate the Customer with this transaction.
         $transaction->add_extra_meta('customer_id', $customer_id);
-        return $customer_id;
+        // Just make sure we return a string.
+        return $customer_id ?? '';
     }
 }
