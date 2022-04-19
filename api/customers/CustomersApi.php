@@ -2,9 +2,11 @@
 
 namespace EventEspresso\Square\api\customers;
 
+use EE_Error;
 use EE_Registration;
 use EED_SquareOnsite;
 use EventEspresso\Square\api\SquareApi;
+use ReflectionException;
 
 /**
  * Class CustomersApi
@@ -17,7 +19,6 @@ use EventEspresso\Square\api\SquareApi;
  */
 class CustomersApi
 {
-
     /**
      * @var SquareApi
      */
@@ -81,7 +82,7 @@ class CustomersApi
             return $response;
         }
         if (! $this->hasCustomerData($response)) {
-            // Square return an empty body if nothing is found, so we return an empty array.
+            // Square returns an empty body if nothing is found, so we return an empty array.
             return [];
         }
         // Got customer/s, return it.
@@ -111,7 +112,7 @@ class CustomersApi
     {
         try {
             $country_iso = EED_SquareOnsite::getCountryIsoByName($this->billing_info['country']);
-        } catch (\EE_Error | \ReflectionException $e) {
+        } catch (EE_Error | ReflectionException $e) {
             $country_iso = '';
         }
         $parameters = [
