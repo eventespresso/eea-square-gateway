@@ -482,6 +482,6 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
         // Associate the Customer with this transaction.
         $transaction->add_extra_meta('customer_id', $customer_id);
         // Just make sure we return a string.
-        return $customer_id ?? '';
+        return $customer_id ?: '';
     }
 }
