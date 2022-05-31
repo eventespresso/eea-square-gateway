@@ -152,9 +152,9 @@ jQuery(document).ready(function($) {
 				this.billCity = this.billingForm.find(
 					'input[id*="billing-form-city"]:visible');
 				this.billState = this.billingForm.find(
-					'input[id*="billing-form-state"]:visible');
+					'select[id*="billing-form-state"]:visible');
 				this.billCountry = this.billingForm.find(
-					'input[id*="billing-form-country"]:visible');
+					'select[id*="billing-form-country"]:visible');
 				this.billZip = this.billingForm.find(
 					'input[id*="billing-form-zip"]:visible');
 				this.billPhone = this.billingForm.find(
