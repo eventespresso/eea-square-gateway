@@ -49,6 +49,12 @@
             <li>
                 <?php esc_html_e('Read my merchant profile information', 'event_espresso'); ?>
             </li>
+            <li>
+                <?php esc_html_e('Read my customer contact information', 'event_espresso'); ?>
+            </li>
+            <li>
+                <?php esc_html_e('Modify my customer contact information', 'event_espresso'); ?>
+            </li>
         </ul>
     </li>
     <li>

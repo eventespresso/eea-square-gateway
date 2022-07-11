@@ -91,25 +91,25 @@ class EED_SquareOnsite extends EED_Module
         if (! $paymentMethod instanceof EE_Payment_Method) {
             return;
         }
-        $orderId      = $transaction->get_extra_meta('order_id', true, false);
-        $orderVersion = $transaction->get_extra_meta('order_version', true, false);
-        $pmSettings   = $paymentMethod->settings_array();
-        $access_token = ! empty($pmSettings[ Domain::META_KEY_ACCESS_TOKEN ])
+        $order_id      = $transaction->get_extra_meta('order_id', true, false);
+        $order_version = $transaction->get_extra_meta('order_version', true, false);
+        $pm_settings   = $paymentMethod->settings_array();
+        $access_token  = ! empty($pm_settings[ Domain::META_KEY_ACCESS_TOKEN ])
             ? EED_SquareOnsiteOAuth::decryptString(
-                $pmSettings[ Domain::META_KEY_ACCESS_TOKEN ],
-                $pmSettings['debug_mode']
+                $pm_settings[ Domain::META_KEY_ACCESS_TOKEN ],
+                $pm_settings['debug_mode']
             )
             : false;
-        if ($orderId && $access_token) {
+        if ($order_id && $access_token) {
             $SquareApi = new SquareApi(
                 $access_token,
-                $pmSettings[ Domain::META_KEY_APPLICATION_ID ],
-                $pmSettings[ Domain::META_KEY_USE_DIGITAL_WALLET ],
-                $pmSettings['debug_mode'],
-                $pmSettings[ Domain::META_KEY_LOCATION_ID ]
+                $pm_settings[ Domain::META_KEY_APPLICATION_ID ],
+                $pm_settings[ Domain::META_KEY_USE_DIGITAL_WALLET ],
+                $pm_settings['debug_mode'],
+                $pm_settings[ Domain::META_KEY_LOCATION_ID ]
             );
             $CancelOrder = new CancelOrder($SquareApi, $transaction->ID());
-            $CancelOrder->cancel($orderId, $orderVersion);
+            $CancelOrder->cancel($order_id, $order_version);
         }
     }
 

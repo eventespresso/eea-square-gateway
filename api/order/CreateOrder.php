@@ -68,11 +68,12 @@ class CreateOrder extends OrdersApi
      * Create a Square Order.
      *
      * @param EE_Payment $payment
+     * @param string     $customer_id
      * @return Object|array
      * @throws EE_Error
      * @throws ReflectionException
      */
-    public function create(EE_Payment $payment)
+    public function create(EE_Payment $payment, string $customer_id = '')
     {
         $this->order_items = new OrderItems();
         $transaction       = $payment->transaction();
@@ -89,8 +90,10 @@ class CreateOrder extends OrdersApi
         }
         // Just in case we were not able to recognize some item, add the difference as an extra line item.
         $this->addOtherLineItems($transaction, $currency);
+        // Also add a fulfillment. This is required for the order to be displayed in the dashboard.
+        $this->addOrderFulfillment($transaction);
 
-        $order = $this->buildOrder($transaction->ID());
+        $order = $this->buildOrder($transaction->ID(), $customer_id);
         // First calculate the order to see if the prices match.
         $calculateResponse = $this->api->sendRequest($order, $this->post_url . 'calculate');
         $order             = $this->adjustResponseTotal($calculateResponse, $order, $payment_amount, $currency);
@@ -276,12 +279,39 @@ class CreateOrder extends OrdersApi
 
 
     /**
+     * Add an order fulfillment.
+     *
+     * @param EE_Transaction $transaction
+     */
+    private function addOrderFulfillment(EE_Transaction $transaction)
+    {
+        try {
+            $primary_registrant = $transaction->primary_registration();
+            $display_name = $primary_registrant->attendeeName();
+        } catch (EE_Error | ReflectionException $e) {
+            $display_name = 'Unknown';
+        }
+        $this->order_items->addFulfillment([
+            'type'  => 'SHIPMENT',
+            'state' => 'PROPOSED',
+            'shipment_details' => [
+                'recipient' => [
+                    'display_name' => $display_name
+                ],
+                'pickup_at' => date("c", time()),
+            ],
+        ]);
+    }
+
+
+    /**
      * Forms the Order.
      *
-     * @param int $TXN_ID
+     * @param int    $TXN_ID
+     * @param string $customer_id
      * @return array
      */
-    private function buildOrder(int $TXN_ID): array
+    private function buildOrder(int $TXN_ID, string $customer_id = ''): array
     {
         $key_prefix = $this->api->isSandboxMode() ? 'TEST-order' : 'event-order';
         // Form an order with all the line items and discounts.
@@ -294,12 +324,21 @@ class CreateOrder extends OrdersApi
             ],
         ];
 
+        // Add extra parameters. A customer in this case.
+        if ($customer_id) {
+            $order['order']['customer_id'] = $customer_id;
+        }
+
         // Check the taxes and discounts before adding.
         if ($this->order_items->hasTaxes()) {
             $order['order']['taxes'] = $this->order_items->taxes();
         }
         if (! empty($this->order_items->hasDiscounts())) {
             $order['order']['discounts'] = $this->order_items->discounts();
+        }
+        // Fulfillment is required for the order to be displayed in the dashboard.
+        if (! empty($this->order_items->hasFulfillments())) {
+            $order['order']['fulfillments'] = $this->order_items->fulfillments();
         }
         return $order;
     }

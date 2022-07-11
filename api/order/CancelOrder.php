@@ -16,11 +16,11 @@ class CancelOrder extends OrdersApi
     /**
      * Cancel the Square Order.
      *
-     * @param string         $orderId
-     * @param string         $orderVersion
+     * @param string  $order_id
+     * @param string  $order_version
      * @return Object|array
      */
-    public function cancel(string $orderId, string $orderVersion)
+    public function cancel(string $order_id, string $order_version)
     {
         // Send cancel Order request.
         return $this->api->sendRequest(
@@ -28,11 +28,11 @@ class CancelOrder extends OrdersApi
                 'idempotency_key' => $this->idempotency_key->value(),
                 'order'           => [
                     'location_id' => $this->api->locationId(),
-                    'version'     => (int)$orderVersion + 1,
+                    'version'     => (int)$order_version + 1,
                     'state'       => 'CANCELED',
                 ],
             ],
-            $this->post_url . $orderId,
+            $this->post_url . $order_id,
             'PUT'
         );
     }

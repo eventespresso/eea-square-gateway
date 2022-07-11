@@ -27,6 +27,11 @@ class OrderItems
     /**
      * @var array
      */
+    protected $fulfillments = [];
+
+    /**
+     * @var array
+     */
     protected $discount_IDs = [];
 
     /**
@@ -61,6 +66,15 @@ class OrderItems
         $this->discounts[] = $discount;
         // Also track discount UUIDs separately, for line items 'applied_discounts' parameter.
         $this->addDiscountID($discount['uid']);
+    }
+
+
+    /**
+     * @param array $fulfillment
+     */
+    public function addFulfillment(array $fulfillment)
+    {
+        $this->fulfillments[] = $fulfillment;
     }
 
 
@@ -123,6 +137,15 @@ class OrderItems
     /**
      * @return array
      */
+    public function fulfillments(): array
+    {
+        return $this->fulfillments;
+    }
+
+
+    /**
+     * @return array
+     */
     public function discountIDs(): array
     {
         return $this->discount_IDs;
@@ -153,6 +176,15 @@ class OrderItems
     public function hasDiscounts(): bool
     {
         return ! empty($this->discounts);
+    }
+
+
+    /**
+     * @return bool
+     */
+    public function hasFulfillments(): bool
+    {
+        return ! empty($this->fulfillments);
     }
 
 

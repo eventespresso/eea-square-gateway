@@ -80,11 +80,11 @@ class PaymentApi
     ) {
         $this->api               = $api;
         $this->gateway           = $gateway;
+        $this->billing_info      = $billing_info;
         $this->payment_token     = $billing_info['eea_square_token'] ?? '';
         $this->verificationToken = $billing_info['eea_square_sca'] ?? '';
         $this->post_url          = $this->api->apiEndpoint() . 'payments';
         $this->idempotency_key   = new IdempotencyKey($this->api->isSandboxMode(), $TXN_ID);
-        $this->billing_info      = $billing_info;
     }
 
 
@@ -141,7 +141,7 @@ class PaymentApi
         }
         if (! isset($response->payment)) {
             $request_error['error']['message'] = esc_html__(
-                'Unexpected error. No order returned in Order create response.',
+                'Unexpected error. No payment returned in Payment create response.',
                 'event_espresso'
             );
             return $request_error;

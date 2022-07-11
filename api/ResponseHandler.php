@@ -60,6 +60,17 @@ class ResponseHandler
     }
 
 
+    /**
+     * This removes all errors from the list.
+     *
+     * @return void
+     */
+    public function clearErrors()
+    {
+        $this->errors = [];
+    }
+
+
     private function setInValid()
     {
         $this->valid = false;
