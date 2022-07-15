@@ -13,6 +13,21 @@ namespace EventEspresso\Square\domain;
 class Domain
 {
     /**
+     * Holds the Square API version used in this integration.
+     */
+    public const SQUARE_API_VERSION = '2021-05-13';
+
+    /*
+     * Holds the name of the health check fail admin notice.
+     */
+    public const ADMIN_NOTICE_HEALTH_CHECK = 'eea_square_health_check_fail_notice';
+
+    /*
+     * Holds the name of the cron hook that does a health check.
+     */
+    public const CRON_EVENT_HEALTH_CHECK = 'AHEEA_Square_oauth_health_check';
+
+    /**
      * Name of Extra Meta that stores the Square Application ID used in API calls.
      */
     public const META_KEY_APPLICATION_ID = 'application_id';
@@ -73,11 +88,6 @@ class Domain
      * refresh_token, expires_at, merchant_id, using_square_oauth, throttle_time, locations_list, permissions_scope.
      */
     public const META_KEY_SQUARE_DATA = 'square_data';
-
-    /**
-     * Holds the Square API version used in this integration.
-     */
-    public const SQUARE_API_VERSION = '2021-05-13';
 
     /**
      * Name of the Extra Meta that stores the domain verification status.

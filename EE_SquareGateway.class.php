@@ -48,6 +48,7 @@ class EE_SquareGateway extends EE_Addon
                 'module_paths' => [
                     EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'modules' . DS . 'EED_SquareOnsite.module.php',
                     EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'modules' . DS . 'EED_SquareOnsiteOAuth.module.php',
+                    EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'modules' . DS . 'EED_OAuthHealthCheck.module.php',
                 ],
                 // If plugin update engine is being used for auto-updates. not needed if PUE is not being used.
                 'pue_options' => [

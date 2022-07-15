@@ -69,17 +69,15 @@ class BillingForm extends EE_Billing_Attendee_Info_Form
      */
     public function __construct(EE_Payment_Method $paymentMethod, array $options = [])
     {
-        // Check the token and refresh if needed.
-        EED_SquareOnsiteOAuth::checkAndRefreshToken($paymentMethod);
         // Don't initiate if there's no transaction.
         // This may occur on a partial payment when a PM page is loaded without Square (or any other payment) select.
         if (isset($options['transaction']) && $options['transaction'] instanceof EE_Transaction) {
             if (! isset($options['template_path'])) {
                 throw new EE_Error(
                     sprintf(
-                        // translators: %1$s: EESquareOnsiteBillingForm. $2$s: Options template path.
+                        // translators: %1$s: EESquareOnsiteBillingForm. %2$s: Options template path.
                         esc_html__(
-                            '%1$s instantiated without the required template_path. Please provide it in $2$s',
+                            '%1$s instantiated without the required template_path. Please provide it in %2$s',
                             'event_espresso'
                         ),
                         __CLASS__,

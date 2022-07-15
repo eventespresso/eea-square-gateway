@@ -8,6 +8,7 @@ use EE_PMT_SquareOnsite;
 use EE_Payment_Method;
 use EE_Select_Input;
 use EE_Yes_No_Input;
+use EED_OAuthHealthCheck;
 use EED_SquareOnsiteOAuth;
 use EventEspresso\Square\domain\Domain;
 use EE_Error;
@@ -60,12 +61,12 @@ class SettingsForm extends EE_Payment_Method_Form
         // Build the PM form.
         parent::__construct($pmFormParams);
 
-        // Validate connection first.
+        // Check if OAuth'ed in the correct origin (debug vs live).
+        $this->checkOauthOrigin($pmInstance);
+        // Validate connection.
         $this->validateConnection($pmInstance);
-
         // add the OAuth section
         $this->addSquareConnectButton($paymentMethod, $pmInstance);
-
         // Disable inputs if needed
         $this->toggleSubsections($pmInstance);
     }
@@ -94,7 +95,7 @@ class SettingsForm extends EE_Payment_Method_Form
 
 
     /**
-     * Possibly exclude the default authentication fields.
+     * Validate the connection.
      *
      * @param  EE_Payment_Method $pmInstance
      * @return void
@@ -102,101 +103,98 @@ class SettingsForm extends EE_Payment_Method_Form
      */
     public function validateConnection(EE_Payment_Method $pmInstance)
     {
-        // If there is an established connection we should check the debug mode and the connection.
-        $pmDebugMode = $pmInstance->debug_mode();
-        $debugInput  = $this->get_input('PMD_debug_mode', false);
-
         if (isset($this->squareData[ Domain::META_KEY_USING_OAUTH ])
             && $this->squareData[ Domain::META_KEY_USING_OAUTH ]
         ) {
-            // first check the token and refresh if needed
-            EED_SquareOnsiteOAuth::checkAndRefreshToken($pmInstance);
-            // check the credentials and the API connection
-            $oauthHealthCheck = $this->oauthHealthCheck($pmInstance);
-            // and reset the OAuth connection in case we are no longer authorized for some reason.
-            if (isset($oauthHealthCheck['error'])) {
-                if ($oauthHealthCheck['error']['code'] === 'NOT_AUTHORIZED') {
-                    // Seems like the Token got revoked or outdated, reset the connection.
-                    $oauthReset = $this->resetOauthSettings($pmInstance);
-                    if ($oauthReset) {
-                        EED_SquareOnsiteOAuth::errorLogAndExit(
-                            $pmInstance,
-                            'OAuth revoked',
-                            $oauthHealthCheck,
-                            false
-                        );
-                        $this->add_validation_error(
-                            sprintf(
-                                // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
-                                esc_html__(
-                                    'The OAuth %1$sauthorization was revoked%2$s so the connection was reset. Please re-authorize (Connect) for the Square payment method to function properly.',
-                                    'event_espresso'
-                                ),
-                                '<strong>',
-                                '</strong>'
-                            ),
-                            'eea_square_oauth_connection_was_reset'
-                        );
-                    }
-                } else {
-                    EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'OAuth error', $oauthHealthCheck, false);
-                    $this->add_validation_error(
-                        sprintf(
-                            // translators: %1$s: the error message.
-                            esc_html__(
-                                'There was an error while doing the authorization health check: "%1$s". Please re-authorize (Connect) for the Square payment method to function properly.',
-                                'event_espresso'
-                            ),
-                            $oauthHealthCheck['error']['message']
-                        ),
-                        'eea_square_oauth_connection_reset_request'
-                    );
-                }
-            }
-
-            if (
-                isset($this->squareData[ Domain::META_KEY_LIVE_MODE ])
-                && $this->squareData[ Domain::META_KEY_LIVE_MODE ]
-                && $pmDebugMode
-            ) {
-                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $this->squareData, false);
+            $user_id = get_current_user_id();
+            // Check the credentials and the API connection.
+            $oauth_health_check = EED_OAuthHealthCheck::check($pmInstance);
+            if (isset($oauth_health_check['error'])) {
+                // If we have an error display it to the admin but continue using the "old" oauth key.
+                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'OAuth error', $oauth_health_check, false);
                 $this->add_validation_error(
                     sprintf(
-                        // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
+                        // translators: %1$s: the error message.
                         esc_html__(
-                            '%1$sSquare Payment Method%2$s is in debug mode but the authentication with %1$sSquare%2$s is in Live mode. Payments will not be processed correctly! If you wish to test this payment method, please reset the connection and use sandbox credentials to authenticate with Square.',
+                            'Authorization health check failed with error: "%1$s" Please try to re-authorize (reConnect) for the Square payment method to function properly.',
                             'event_espresso'
                         ),
-                        '<strong>',
-                        '</strong>'
+                        $oauth_health_check['error']['message']
                     ),
-                    'ee4_square_live_connection_but_pm_debug_mode'
+                    'eea_square_oauth_connection_reset_request'
                 );
-            } elseif (
-                (! isset($this->squareData[ Domain::META_KEY_LIVE_MODE ])
-                || ! $this->squareData[ Domain::META_KEY_LIVE_MODE ])
-                && ! $pmDebugMode
-            ) {
-                EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $this->squareData, false);
-                $this->add_validation_error(
-                    sprintf(
-                        // translators: %1$s: opening strong html tag. $2$s: closing strong html tag.
-                        esc_html__(
-                            '%1$sSquare Payment Method%2$s is in live mode but the authentication with %1$sSquare%2$s is in sandbox mode. Payments will not be processed correctly! If you wish to process real payments with this payment method, please reset the connection and use live credentials to authenticate with Square.',
-                            'event_espresso'
-                        ),
-                        '<strong>',
-                        '</strong>'
-                    ),
-                    'ee4_square_sandbox_connection_but_pm_not_in_debug_mode'
-                );
-            }
-            // Don't allow changing the debug mode setting while connected.
-            // And if we're creating the form for receiving POST data, ignore debug mode input's value.
-            if (method_exists($debugInput, 'isDisabled')) {
-                $debugInput->disable();
+                // Also add an admin notice.
+                update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_CHECK, $pmInstance->slug());
+            } else {
+                // Disable admin error notice by default.
+                update_user_meta($user_id, Domain::ADMIN_NOTICE_HEALTH_CHECK, '');
             }
         }
+    }
+
+
+    /**
+     * Check OAuth's origin nad possibly exclude the default authentication fields.
+     *
+     * @param  EE_Payment_Method $pmInstance
+     * @return void
+     * @throws EE_Error
+     */
+    public function checkOauthOrigin(EE_Payment_Method $pmInstance)
+    {
+        $pmDebugMode = $pmInstance->debug_mode();
+        $debugInput  = $this->get_input('PMD_debug_mode', false);
+        // Do nothing if not connected.
+        if (! isset($this->squareData[ Domain::META_KEY_USING_OAUTH ])
+            || ! $this->squareData[ Domain::META_KEY_USING_OAUTH ]
+        ) {
+            return;
+        }
+
+        // If there is an established connection we should check the debug mode and the connection.
+        if (
+            isset($this->squareData[ Domain::META_KEY_LIVE_MODE ])
+            && $this->squareData[ Domain::META_KEY_LIVE_MODE ]
+            && $pmDebugMode
+        ) {
+            EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $this->squareData, false);
+            $this->add_validation_error(
+                sprintf(
+                    // translators: %1$s: opening strong html tag. %2$s: closing strong html tag.
+                    esc_html__(
+                        '%1$sSquare Payment Method%2$s is in debug mode but the authentication with %1$sSquare%2$s is in Live mode. Payments will not be processed correctly! If you wish to test this payment method, please reset the connection and use sandbox credentials to authenticate with Square.',
+                        'event_espresso'
+                    ),
+                    '<strong>',
+                    '</strong>'
+                ),
+                'ee4_square_live_connection_but_pm_debug_mode'
+            );
+        } elseif (
+            (! isset($this->squareData[ Domain::META_KEY_LIVE_MODE ])
+            || ! $this->squareData[ Domain::META_KEY_LIVE_MODE ])
+            && ! $pmDebugMode
+        ) {
+            EED_SquareOnsiteOAuth::errorLogAndExit($pmInstance, 'Debug vs live mode', $this->squareData, false);
+            $this->add_validation_error(
+                sprintf(
+                    // translators: %1$s: opening strong html tag. %2$s: closing strong html tag.
+                    esc_html__(
+                        '%1$sSquare Payment Method%2$s is in live mode but the authentication with %1$sSquare%2$s is in sandbox mode. Payments will not be processed correctly! If you wish to process real payments with this payment method, please reset the connection and use live credentials to authenticate with Square.',
+                        'event_espresso'
+                    ),
+                    '<strong>',
+                    '</strong>'
+                ),
+                'ee4_square_sandbox_connection_but_pm_not_in_debug_mode'
+            );
+        }
+        // Don't allow changing the debug mode setting while connected.
+        // And if we're creating the form for receiving POST data, ignore debug mode input's value.
+        if (method_exists($debugInput, 'isDisabled')) {
+            $debugInput->disable();
+        }
+
         $debugInput->set_html_help_text(
             $debugInput->html_help_text()
             . '</p><p class="disabled-description">'
@@ -205,75 +203,6 @@ class SettingsForm extends EE_Payment_Method_Form
                 'event_espresso'
             )
         );
-    }
-
-
-    /**
-     * Checks if the OAuth credentials are still healthy and we are authorized.
-     *
-     * @param  EE_Payment_Method $pmInstance
-     * @return array ['healthy' => true] | ['error' => ['message' => 'the_message', 'code' => 'the_code']]
-     */
-    public function oauthHealthCheck(EE_Payment_Method $pmInstance): array
-    {
-        $error = [
-            'error' => [
-                'code'    => 'NO_ACCESS_TOKEN',
-                'message' => esc_html__('One or more authentication parameters are missing', 'event_espresso')
-            ]
-        ];
-        // Double check main oAuth parameters.
-        try {
-            $access_token = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, '');
-            $app_id       = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true, '');
-        } catch (EE_Error | ReflectionException $e) {
-            return $error;
-        }
-        if (! $access_token || ! $app_id) {
-            return $error;
-        }
-
-        // Request a list of locations to check API requests.
-        $locations = EED_SquareOnsiteOAuth::getMerchantLocations($pmInstance);
-        if (is_array($locations) && isset($locations['error'])) {
-            switch ($locations['error']['code']) {
-                case 'ACCESS_TOKEN_EXPIRED':
-                case 'ACCESS_TOKEN_REVOKED':
-                case 'INSUFFICIENT_SCOPES':
-                    // We have an error. Put it under NOT_AUTHORIZED category for easy identification.
-                    $locations['error']['code'] = 'NOT_AUTHORIZED';
-                    return $locations;
-                default:
-                    return $locations;
-            }
-        }
-        return ['healthy' => true];
-    }
-
-
-    /**
-     * Resets all that OAuth related settings.
-     *
-     * @param EE_Payment_Method $pmInstance
-     * @return boolean
-     * @throws ReflectionException
-     */
-    public function resetOauthSettings(EE_Payment_Method $pmInstance): bool
-    {
-        try {
-            $pmInstance->delete_extra_meta(Domain::META_KEY_APPLICATION_ID);
-            $pmInstance->delete_extra_meta(Domain::META_KEY_ACCESS_TOKEN);
-            $pmInstance->delete_extra_meta(Domain::META_KEY_LOCATION_ID);
-            $pmInstance->update_extra_meta(
-                Domain::META_KEY_SQUARE_DATA,
-                [
-                    Domain::META_KEY_USING_OAUTH => false,
-                ]
-            );
-        } catch (EE_Error $e) {
-            return false;
-        }
-        return true;
     }
 
 
