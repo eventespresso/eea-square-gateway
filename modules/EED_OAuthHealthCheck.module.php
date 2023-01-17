@@ -9,7 +9,7 @@ use EventEspresso\Square\domain\Domain;
  *
  * @author  Nazar Kolivoshka
  * @package EventEspresso\Square\modules
- * @since   $VID:$
+ * @since   1.0.3.p
  */
 class EED_OAuthHealthCheck extends EED_Module
 {
