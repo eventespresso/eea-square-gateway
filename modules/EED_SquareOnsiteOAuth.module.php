@@ -162,7 +162,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         );
         /**
          * Save the permissions scope. Used for checking the permissions before using the API.
-         * @since $VID:$
+         * @since 1.0.4.p
          */
         $square_pm->update_extra_meta(Domain::META_KEY_PERMISSIONS, Domain::PERMISSIONS_SCOPE_ALL);
 
