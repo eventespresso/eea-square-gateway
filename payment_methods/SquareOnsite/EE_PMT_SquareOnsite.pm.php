@@ -1,9 +1,5 @@
 <?php
 
-if (! defined('EVENT_ESPRESSO_VERSION')) {
-    exit('No direct script access allowed');
-}
-
 use EventEspresso\Square\payment_methods\SquareOnsite\forms\BillingForm;
 use EventEspresso\Square\payment_methods\SquareOnsite\forms\SettingsForm;
 
@@ -17,19 +13,11 @@ use EventEspresso\Square\payment_methods\SquareOnsite\forms\SettingsForm;
 class EE_PMT_SquareOnsite extends EE_PMT_Base
 {
     /**
-     * Path to the templates folder for Square payment method.
-     * @var string
-     */
-    protected $_template_path = null;
-
-
-    /**
-     * Class constructor.
-     *
-     * @param null $pmInstance
+     * @param EE_Payment_Method|null $pm_instance
+     * @throws ReflectionException
      * @throws EE_Error
      */
-    public function __construct($pmInstance = null)
+    public function __construct($pm_instance = null)
     {
         $this->_template_path = dirname(__FILE__) . DS . 'templates' . DS;
         $this->_default_description = esc_html__('Please provide the following billing information.', 'event_espresso');
@@ -49,7 +37,7 @@ class EE_PMT_SquareOnsite extends EE_PMT_Base
         // Log Square JS errors.
         add_action('wp_ajax_eeaSquareLogError', [__CLASS__, 'logJsError']);
 
-        parent::__construct($pmInstance);
+        parent::__construct($pm_instance);
     }
 
 
@@ -57,6 +45,8 @@ class EE_PMT_SquareOnsite extends EE_PMT_Base
      * Generate a new payment settings form.
      *
      * @return EE_Payment_Method_Form
+     * @throws EE_Error
+     * @throws ReflectionException
      */
     public function generate_new_settings_form()
     {
@@ -79,15 +69,16 @@ class EE_PMT_SquareOnsite extends EE_PMT_Base
      * Creates a billing form for this payment method type.
      *
      * @param EE_Transaction|null $transaction
-     * @param array               $extraArgs
-     * @return EE_Billing_Info_Form
+     * @param array|null          $extra_args
+     * @return EE_Billing_Info_Form|null
      * @throws EE_Error
+     * @throws ReflectionException
      */
-    public function generate_new_billing_form(EE_Transaction $transaction = null, $extraArgs = [])
+    public function generate_new_billing_form(EE_Transaction $transaction = null, $extra_args = [])
     {
         $options = array_merge(
             ['transaction' => $transaction, 'template_path' => $this->_template_path, 'square_onsite_pmt' => $this],
-            $extraArgs
+            $extra_args
         );
         return new BillingForm($this->_pm_instance, $options);
     }
@@ -99,41 +90,27 @@ class EE_PMT_SquareOnsite extends EE_PMT_Base
      * @param string $currency Accepted currency.
      * @return int
      */
-    public static function getDecimalPlaces($currency = '')
+    public static function getDecimalPlaces(string $currency = ''): int
     {
-        if (! $currency) {
-            $currency = EE_Registry::instance()->CFG->currency->code;
+        try {
+            $currency_config = $currency !== '' ? new EE_Currency_Config($currency) : null;
+        } catch (EE_Error | ReflectionException $e) {
+            $currency_config = null;
         }
-        switch (strtoupper($currency)) {
-            // Zero decimal currencies.
-            case 'BIF':
-            case 'CLP':
-            case 'DJF':
-            case 'GNF':
-            case 'JPY':
-            case 'KMF':
-            case 'KRW':
-            case 'MGA':
-            case 'PYG':
-            case 'RWF':
-            case 'UGX':
-            case 'VND':
-            case 'VUV':
-            case 'XAF':
-            case 'XOF':
-            case 'XPF':
-                return 0;
-            default:
-                return 2;
+        if (! $currency_config) {
+            $currency_config = EE_Registry::instance()->CFG->currency instanceof EE_Currency_Config
+                ? EE_Registry::instance()->CFG->currency
+                : new EE_Currency_Config();
         }
+        return $currency_config->dec_plc;
     }
 
 
     /**
      * Adds info to the help tab.
      *
-     * @see EE_PMT_Base::help_tabs_config()
      * @return array
+     * @see EE_PMT_Base::help_tabs_config()
      */
     public function help_tabs_config()
     {

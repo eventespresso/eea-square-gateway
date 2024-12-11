@@ -15,7 +15,6 @@ use EventEspresso\Square\api\SquareApi;
  */
 abstract class OrdersApi
 {
-
     /**
      * @var SquareApi
      */

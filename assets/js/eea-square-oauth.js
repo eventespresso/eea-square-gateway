@@ -50,13 +50,12 @@ jQuery(document).ready(function($) {
 		this.form = {};
 		this.connectBtnId = '#eea_square_connect_btn_' + this.slug;
 		this.disconnectBtnId = '#eea_square_disconnect_btn_' + this.slug;
-		this.connectSectionId = '#eea_square_oauth_section_' + this.slug;
 		this.registerDomainBtnId = '#eea_apple_register_domain_' + this.slug;
-		this.useDwalletId = '#' + this.slug + '-use-dwallet';
-		this.connectSection = 'eea-connect-section-' + this.slug;
-		this.disconnectSection = 'eea-disconnect-section-' + this.slug;
-		this.locationsSelect = 'eea-locations-select-' + this.slug;
-		this.sandboxOauthedTextSection = 'eea_square_test_connected_txt_' + this.slug;
+		this.connectSection = '.eea-connect-section-' + this.slug;
+		this.disconnectSection = '.eea-disconnect-section-' + this.slug;
+		this.locationsSelect = '.eea-locations-select-' + this.slug;
+		this.sandboxOauthedTextSection = '#eea_square_test_connected_txt_' + this.slug;
+		this.sandboxModeHelpText = '#' + this.slug + '_settings_form-payment-method-settings-pmd-debug-mode-help'
 		this.formId = '#' + squareInstanceVars.formId;
 		this.processingIconName = 'espresso-ajax-loading';
 		this.debugModeInput = {};
@@ -77,11 +76,11 @@ jQuery(document).ready(function($) {
 			}
 			this.connectBtnListeners();
 			if (this.debugModeInput.prop('disabled') && squareParams.canDisableInput) {
-				this.debugModeInput.siblings('p.description').hide();
-				this.debugModeInput.siblings('p.disabled-description').show();
+				this.debugModeInput.siblings(this.sandboxModeHelpText).hide();
+				this.debugModeInput.siblings('#sandbox-mode-disabled-notice').show();
 			} else {
-				this.debugModeInput.siblings('p.description').show();
-				this.debugModeInput.siblings('p.disabled-description').hide();
+				this.debugModeInput.siblings(this.sandboxModeHelpText).show();
+				this.debugModeInput.siblings('#sandbox-mode-disabled-notice').hide();
 			}
 
 			this.initialized = true;
@@ -123,7 +122,7 @@ jQuery(document).ready(function($) {
 			// Connect with Square.
 			this.connectBtn.on('click', function(event) {
 				event.preventDefault();
-				const buttonContainer = $(this).closest('tr');
+				const buttonContainer = $(this).closest('.square-connections-section-div');
 				const submittingForm = $(this).parents('form:first')[0];
 				if (buttonContainer && submittingForm) {
 					// Check if window already open.
@@ -202,7 +201,7 @@ jQuery(document).ready(function($) {
 			// Disconnect from Square.
 			$(this.disconnectBtnId).on('click', function(event) {
 				event.preventDefault();
-				const buttonContainer = $(this).closest('tr');
+				const buttonContainer = $(this).closest('.square-connections-section-div');
 				const submittingForm = $(this).parents('form:first')[0];
 				if (buttonContainer && submittingForm) {
 					squarePmInstance.submittedPm = buttonContainer.attr('id').replace(
@@ -266,9 +265,9 @@ jQuery(document).ready(function($) {
 		 */
 		this.toggleNoDataInputs = function(target) {
 			const targetForm = target.parents('form');
-			const locationsSelect = targetForm.find('.' + this.locationsSelect).first();
+			const locationsSelect = targetForm.find(this.locationsSelect).first();
 			const locationsList = locationsSelect.find('option').length;
-			const locationsSection = targetForm.find('.' + this.locationsSelect).closest('tr');
+			const locationsSection = targetForm.find(this.locationsSelect).closest('tr');
 
 			// Hide if no options in the dropdown select.
 			if (locationsList < 1) {
@@ -285,15 +284,11 @@ jQuery(document).ready(function($) {
 		this.updateBtnText = function(caller, allowAlert) {
 			const submittingForm = caller.parents('form:first')[0];
 			if (submittingForm) {
-				const squareConnectBtn = $(submittingForm).find(
-					'a[id=' + this.connectBtnId.substr(1) + ']'
-				)[0];
+				const squareConnectBtn = $(submittingForm).find('#' + this.connectBtnId.substr(1));
 				if (squareConnectBtn) {
 					const btnTextSpan = $(squareConnectBtn).find('span')[0];
 					const pmDebugModeEnabled = caller[0].value;
-					const disconnectSection = $(submittingForm).find(
-						'tr[class="' + this.disconnectSection + '"]'
-					)[0];
+					const disconnectSection = $(submittingForm).find(this.disconnectSection);
 
 					// Change button text.
 					if (btnTextSpan) {
@@ -306,9 +301,7 @@ jQuery(document).ready(function($) {
 
 					// Maybe show an alert.
 					if (allowAlert && disconnectSection && $(disconnectSection).is(':visible')) {
-						const sandboxConnected = $(disconnectSection).find(
-							'strong[class="' + this.connectSection + '"]'
-						)[0];
+						const sandboxConnected = $(disconnectSection).find(this.connectSection);
 						if (sandboxConnected && pmDebugModeEnabled === '0') {
 							alert(squareParams.debugIsOnNotice);
 						} else if (! sandboxConnected && pmDebugModeEnabled === '1') {
@@ -324,14 +317,10 @@ jQuery(document).ready(function($) {
 		 * @function
 		 */
 		this.updateConnectionInfo = function(submittingForm) {
-			const disconnectSection = $(submittingForm).find(
-				'tr[class="' + this.disconnectSection + '"]'
-			)[0];
+			const disconnectSection = $(submittingForm).find(this.disconnectSection);
 			if (disconnectSection && this.debugModeInput) {
 				const pmDebugModeValue = this.debugModeInput[0].value;
-				const sandboxConnectedText = $(disconnectSection).find(
-					'strong[id="' + this.sandboxOauthedTextSection + '"]'
-				)[0];
+				const sandboxConnectedText = $(disconnectSection).find(this.sandboxOauthedTextSection);
 				if (sandboxConnectedText &&
 					pmDebugModeValue === '0' &&
 					$(sandboxConnectedText).html().length > 0
@@ -402,9 +391,7 @@ jQuery(document).ready(function($) {
 
 				// Display the error in the pop-up.
 				if (this.oauthWindow) {
-					this.oauthWindow.document.getElementById(
-						this.processingIconName
-					).style.display = 'none';
+					this.oauthWindow.document.getElementById(this.processingIconName).style.display = 'none';
 					$(this.oauthWindow.document.body).html(squareError);
 					this.oauthWindow = null;
 				}
@@ -426,16 +413,14 @@ jQuery(document).ready(function($) {
 
 		this.requestError = function(response, err, description) {
 			let error = squareParams.errorResponse;
-			if (description) {
+			if (description && typeof description === 'string') {
 				error = error + ': ' + description;
 			}
 			$('#' + this.processingIconName).fadeOut('fast');
 			console.error(error);
 			// Display the error in the pop-up.
 			if (this.oauthWindow) {
-				this.oauthWindow.document.getElementById(
-					this.processingIconName
-				).style.display = 'none';
+				this.oauthWindow.document.getElementById(this.processingIconName).style.display = 'none';
 				$(this.oauthWindow.document.body).html(error);
 				this.oauthWindow = null;
 			}
@@ -499,60 +484,68 @@ jQuery(document).ready(function($) {
 					window.do_before_admin_page_ajax();
 				},
 				success: function(response) {
-					const connectSection = $('.' + squareInstance.connectSection);
-					const disconnectSection = $('.' + squareInstance.disconnectSection);
-					const locationsSelect = $('.' + squareInstance.locationsSelect);
-					const locationsSection = locationsSelect.closest('tr');
-					const domainNameSection = squareInstance.registerDomainBtn.closest('tr');
-
 					if (typeof response.connected !== 'undefined' && response.connected) {
-						connectSection.hide();
-						disconnectSection.show();
-						if (squareParams.canDisableInput) {
-							// Disable the debug mode selector.
-							squareInstance.debugModeInput.prop('disabled', true);
-							squareInstance.debugModeInput.siblings('p.description').hide();
-							squareInstance.debugModeInput.siblings('p.disabled-description').show();
-						}
-
-						// Also show the locations dropdown.
-						if (typeof response.location !== 'undefined' && response.location && Object.keys(response.locationList).length > 0) {
-							let selected = '';
-							locationsSelect.empty();
-							$.each(response.locationList, function(listId, listName) {
-								if (listId === response.location) {
-									selected = 'selected';
-								}
-								locationsSelect.append(
-									'<option selected="' + selected + '" value="' + listId + '">' + listName + '</option>'
-								);
-								// Reset the 'selected' flag, just to be safe.
-								selected = '';
-							});
-							locationsSelect.prop('disabled', false);
-							locationsSection.show();
-						}
+						squareInstance.showDisconnectSection(squareInstance, response);
 					} else {
-						connectSection.show();
-						disconnectSection.hide();
-						locationsSection.hide();
-						domainNameSection.hide();
-						if (squareParams.canDisableInput) {
-							// Enable the debug mode selector.
-							squareInstance.debugModeInput.prop('disabled', false);
-							squareInstance.debugModeInput.siblings('p.description').show();
-							squareInstance.debugModeInput.siblings('p.disabled-description').hide();
-						}
+						squareInstance.showConnectSection(squareInstance);
 						if (typeof response.error !== 'undefined') {
 							console.error(response.error);
 							alert(response.error);
 						}
 					}
-
 					$('#' + squareInstance.processingIconName).fadeOut('fast');
 				},
 			} );
 		};
+
+        /**
+         * Show the Connect UI.
+         * @function
+         */
+        this.showConnectSection = function (this_pm) {
+            $(this_pm.disconnectSection).addClass('square-connect-hidden');
+            $(this_pm.connectSection).removeClass('square-connect-hidden');
+            $(this_pm.locationsSelect).closest('tr').hide();
+            this_pm.registerDomainBtn.closest('tr').hide();
+            if (squareParams.canDisableInput) {
+                // Enable the debug mode selector.
+                this_pm.debugModeInput.prop('disabled', false);
+                this_pm.debugModeInput.siblings('p.description').show();
+                this_pm.debugModeInput.siblings('p.disabled-description').hide();
+            }
+        };
+
+        /**
+         * Show the deauthorize UI.
+         * @function
+         */
+        this.showDisconnectSection = function (this_pm, response) {
+            $(this_pm.connectSection).addClass('square-connect-hidden');
+            $(this_pm.disconnectSection).removeClass('square-connect-hidden');
+            $(this_pm.locationsSelect).closest('tr').show();
+            if (squareParams.canDisableInput) {
+                // Disable the debug mode selector.
+                this_pm.debugModeInput.prop('disabled', true);
+                this_pm.debugModeInput.siblings('p.description').hide();
+                this_pm.debugModeInput.siblings('p.disabled-description').show();
+            }
+            // Also show the locations dropdown.
+            if (typeof response.location !== 'undefined' && response.location && Object.keys(response.locationList).length > 0) {
+                let selected = '';
+                $(this_pm.locationsSelect).empty();
+                $.each(response.locationList, function(listId, listName) {
+                    if (listId === response.location) {
+                        selected = 'selected';
+                    }
+                    $(this_pm.locationsSelect).append(
+                        '<option selected="' + selected + '" value="' + listId + '">' + listName + '</option>'
+                    );
+                    // Reset the 'selected' flag, just to be safe.
+                    selected = '';
+                });
+                $(this_pm.locationsSelect).prop('disabled', false);
+            }
+        };
 	}
 	// End of EeaSquareOAuth object.
 

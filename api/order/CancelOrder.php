@@ -12,7 +12,6 @@ namespace EventEspresso\Square\api\order;
  */
 class CancelOrder extends OrdersApi
 {
-
     /**
      * Cancel the Square Order.
      *
@@ -28,7 +27,7 @@ class CancelOrder extends OrdersApi
                 'idempotency_key' => $this->idempotency_key->value(),
                 'order'           => [
                     'location_id' => $this->api->locationId(),
-                    'version'     => (int)$order_version + 1,
+                    'version'     => (int) $order_version + 1,
                     'state'       => 'CANCELED',
                 ],
             ],

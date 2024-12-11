@@ -3,6 +3,7 @@
 use EventEspresso\core\exceptions\InvalidDataTypeException;
 use EventEspresso\core\exceptions\InvalidEntityException;
 use EventEspresso\core\exceptions\InvalidInterfaceException;
+use EventEspresso\Square\domain\Domain;
 
 define('EEA_SQUARE_GATEWAY_PLUGIN_URL', plugin_dir_url(EEA_SQUARE_GATEWAY_PLUGIN_FILE));
 define('EEA_SQUARE_GATEWAY_PLUGIN_BASENAME', plugin_basename(EEA_SQUARE_GATEWAY_PLUGIN_FILE));
@@ -29,37 +30,47 @@ class EE_SquareGateway extends EE_Addon
         EE_Register_Addon::register(
             'SquareGateway',
             [
+                'plugin_slug'          => Domain::LICENSE_PLUGIN_SLUG,
                 'version'              => EEA_SQUARE_GATEWAY_VERSION,
-                'min_core_version'     => '4.10.20.rc.001',
+                'min_core_version'     => Domain::CORE_VERSION_REQUIRED,
                 'main_file_path'       => EEA_SQUARE_GATEWAY_PLUGIN_FILE,
                 'admin_callback'       => 'additionalAdminHooks',
                 'payment_method_paths' => [
                     EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS . 'SquareOnsite',
                 ],
                 // Register auto-loaders.
-                'autoloader_paths' => [
-                    'OAuthForm'         => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
-                        'SquareOnsite' . DS . 'forms' . DS . 'OAuthForm.php',
-                    'BillingForm'       => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
-                        'SquareOnsite' . DS . 'forms' . DS . 'BillingForm.php',
-                    'SettingsForm'      => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
-                        'SquareOnsite' . DS . 'forms' . DS . 'SettingsForm.php',
+                'autoloader_paths'     => [
+                    'OAuthForm'    => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
+                                      'SquareOnsite' . DS . 'forms' . DS . 'OAuthForm.php',
+                    'BillingForm'  => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
+                                      'SquareOnsite' . DS . 'forms' . DS . 'BillingForm.php',
+                    'SettingsForm' => EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'payment_methods' . DS .
+                                      'SquareOnsite' . DS . 'forms' . DS . 'SettingsForm.php',
                 ],
-                'module_paths' => [
+                'module_paths'         => [
                     EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'modules' . DS . 'EED_SquareOnsite.module.php',
                     EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'modules' . DS . 'EED_SquareOnsiteOAuth.module.php',
                     EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'modules' . DS . 'EED_OAuthHealthCheck.module.php',
                 ],
-                // If plugin update engine is being used for auto-updates. not needed if PUE is not being used.
-                'pue_options' => [
+                'namespace'            => [
+                    'FQNS' => 'EventEspresso\Square',
+                    'DIR'  => __DIR__,
+                ],
+                'license'              => [
+                    'beta'             => false,
+                    'main_file_path'   => EEA_SQUARE_GATEWAY_PLUGIN_FILE,
+                    'min_core_version' => Domain::CORE_VERSION_REQUIRED,
+                    'plugin_id'        => Domain::LICENSE_PLUGIN_ID,
+                    'plugin_name'      => Domain::LICENSE_PLUGIN_NAME,
+                    'plugin_slug'      => Domain::LICENSE_PLUGIN_SLUG,
+                    'version'          => EEA_SQUARE_GATEWAY_VERSION,
+                    'wp_override'      => false,
+                ],
+                'pue_options'          => [
                     'pue_plugin_slug' => 'eea-square-gateway',
                     'plugin_basename' => EEA_SQUARE_GATEWAY_PLUGIN_BASENAME,
                     'checkPeriod'     => '24',
                     'use_wp_update'   => false,
-                ],
-                'namespace' => [
-                    'FQNS' => 'EventEspresso\Square',
-                    'DIR'  => __DIR__,
                 ],
             ]
         );
@@ -94,13 +105,13 @@ class EE_SquareGateway extends EE_Addon
         $this->dependencyMap()->registerDependencies(
             'EventEspresso\Square\tools\encryption\SquareOpenSSLEncryption',
             [
-                'EventEspresso\core\services\encryption\Base64Encoder' => EE_Dependency_Map::load_from_cache
+                'EventEspresso\core\services\encryption\Base64Encoder' => EE_Dependency_Map::load_from_cache,
             ]
         );
         $this->dependencyMap()->registerDependencies(
             'EventEspresso\Square\tools\encryption\SquareEncryptionKeyManager',
             [
-                'EventEspresso\core\services\encryption\Base64Encoder' => EE_Dependency_Map::load_from_cache
+                'EventEspresso\core\services\encryption\Base64Encoder' => EE_Dependency_Map::load_from_cache,
             ]
         );
     }
@@ -114,8 +125,14 @@ class EE_SquareGateway extends EE_Addon
      */
     public static function additionalAdminHooks()
     {
-        // Is admin and not in M-Mode ?
-        if (is_admin() && ! EE_Maintenance_Mode::instance()->level()) {
+        // is admin and not in M-Mode ?
+        if (
+            is_admin()
+            && (
+                class_exists('EventEspresso\core\domain\services\database\MaintenanceStatus')
+                && EventEspresso\core\domain\services\database\MaintenanceStatus::isDisabled()
+            ) || ! EE_Maintenance_Mode::instance()->level()
+        ) {
             add_filter('plugin_action_links', ['EE_SquareGateway', 'pluginActions'], 10, 2);
         }
     }
@@ -135,7 +152,7 @@ class EE_SquareGateway extends EE_Addon
             array_unshift(
                 $links,
                 '<a href="admin.php?page=espresso_payment_settings">'
-                    . esc_html__('Settings', 'event_espresso') . '</a>'
+                . esc_html__('Settings', 'event_espresso') . '</a>'
             );
         }
         return $links;

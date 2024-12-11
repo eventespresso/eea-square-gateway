@@ -1,10 +1,11 @@
 <?php
+
 /*
-    Plugin Name: Event Espresso - Square Gateway (EE 4.10+)
+    Plugin Name: Event Espresso Payment Method - Square Integration
     Plugin URI: https://eventespresso.com
     Description: Square is an on-site payment method for Event Espresso for accepting credit and debit cards. An account with Square is required to accept payments.
 
-    Version: 1.0.4.rc.000
+    Version: 1.0.4.rc.015
 
     Author: Event Espresso
     Author URI: https://eventespresso.com
@@ -24,7 +25,7 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA02110-1301USA
  */
 
-define('EEA_SQUARE_GATEWAY_VERSION', '1.0.4.rc.000');
+define('EEA_SQUARE_GATEWAY_VERSION', '1.0.4.rc.015');
 define('EEA_SQUARE_GATEWAY_PLUGIN_FILE', __FILE__);
 define('EEA_SQUARE_GATEWAY_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
@@ -33,6 +34,7 @@ function loadEEASquareGateway()
 {
     if (version_compare(PHP_VERSION, '7.1', '>=')) {
         if (class_exists('EE_Addon')) {
+            EE_Psr4AutoloaderInit::psr4_loader()->addNamespace('EventEspresso\Square', __DIR__);
             require_once(EEA_SQUARE_GATEWAY_PLUGIN_PATH . 'EE_SquareGateway.class.php');
             EE_SquareGateway::registerAddon();
         }

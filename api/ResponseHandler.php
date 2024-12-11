@@ -23,7 +23,6 @@ class ResponseHandler
     protected $valid = true;
 
 
-
     /**
      * @return array
      */
@@ -110,24 +109,26 @@ class ResponseHandler
 
 
     /**
-     * @param $apiResponse
+     * @param $api_response
      * @return void
      */
-    public function checkForResponseErrors($apiResponse): void
+    public function checkForResponseErrors($api_response): void
     {
-        if (! $apiResponse) {
+        $response_body = json_decode($api_response['body'] ?? '');
+        if (! $response_body) {
             $this->setError([
-                'code'    => 'unrecognizable_body',
-                'message' => esc_html__('Unable to read the response body.', 'event_espresso'),
+                'code'         => 'unrecognizable_body',
+                'message'      => esc_html__('Unable to read the response body.', 'event_espresso'),
+                'api_response' => $api_response['body'] ?? $api_response,
             ]);
             $this->setInValid();
             return;
         }
         // Check the data for errors.
-        if (isset($apiResponse->errors)) {
+        if (isset($response_body->errors)) {
             $responseErrorMessage = $responseErrorCode = '';
             $errorCodes           = [];
-            foreach ($apiResponse->errors as $responseError) {
+            foreach ($response_body->errors as $responseError) {
                 $responseErrorMessage .= $responseError->detail;
                 $errorCodes[]         = $responseError->code;
             }

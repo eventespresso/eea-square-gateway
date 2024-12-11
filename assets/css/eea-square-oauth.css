@@ -1,146 +1,65 @@
-/** Square connect button **/
-.eea-square-connect-btn {
-    display: inline-block;
-    margin-bottom: 1px;
-    cursor: pointer;
+#square-connections-section-tr {
+    box-sizing: content-box;
+    min-height: 39px;
+    position: relative;
+}
+.square-connections-section-div {
+    display: flex;
+    align-items: center;
+    height: auto;
+    left: 0;
+    opacity: 1;
+    position: absolute;
+    top: 0.75rem;
+    transition-delay: 0s;
+    visibility: visible;
+}
+.square-connections-section-div.square-connect-hidden {
+    height: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: visibility 0s linear 250ms, opacity 250ms linear, height 250ms linear;
+}
 
-    -webkit-font-smoothing: antialiased;
-    border: 0;
-    padding: 1px;
-    height: 30px;
-    text-decoration: none;
+.eea-disconnect-section-squareonsite > img + strong {
+    margin-inline-start: .3rem;
+    margin-inline-end: .7rem;
+}
 
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
 
-    -moz-border-radius: 4px;
-    -webkit-border-radius: 4px;
-    border-radius: 4px;
-
-    -moz-box-shadow: 0 1px 0 rgba(0,0,0,0.2);
-    -webkit-box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
-
-    background-image: -webkit-linear-gradient(#363839, #011c2b);
-    background-image: -moz-linear-gradient(#363839, #011c2b);
-    background-image: -ms-linear-gradient(#363839, #011c2b);
-    background-image: linear-gradient(#363839, #011c2b);
+.espresso-admin.wp-core-ui .eea-square-connect-btn.button--accent,
+.espresso-admin.wp-core-ui .eea-square-connect-btn.button--secondary,
+.espresso-admin.wp-core-ui .eea-register-domain-btn.button--accent {
+    background-color: var(--ee-status-color-charcoal);
+    border-color: var(--ee-status-color-charcoal);
+    color: var(--ee-color-white);
+}
+.espresso-admin.wp-core-ui .eea-square-connect-btn.button--accent:hover,
+.espresso-admin.wp-core-ui .eea-square-connect-btn.button--secondary:hover,
+.espresso-admin.wp-core-ui .eea-register-domain-btn.button--accent:hover {
+    background-color: var(--ee-status-color-dark-grey);
+    border-color: var(--ee-status-color-dark-grey);
+}
+.espresso-admin.wp-core-ui .eea-square-connect-btn.button--accent:focus,
+.espresso-admin.wp-core-ui .eea-square-connect-btn.button--secondary:focus,
+.espresso-admin.wp-core-ui .eea-register-domain-btn.button--accent:focus {
+    background-color: var(--ee-status-color-dark-grey);
+    border-color: var(--ee-status-color-dark-grey);
 }
 
 .eea-square-connect-btn span {
-    display: block;
-    position: relative;
-    padding: 0 12px 0 40px;
-    height: 30px;
-
-    -moz-border-radius: 3px;
-    -webkit-border-radius: 3px;
-    border-radius: 3px;
-
-    font-size: 14px;
-    line-height: 30px;
-    color: white;
-    font-weight: bold;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.2);
-
-    -moz-box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
-    -webkit-box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
-
-    background: #0b1d37;
-    background-image: -webkit-linear-gradient(#4a4d4f, #272a2b 85%, #1b1c1d);
-    background-image: -moz-linear-gradient(#4a4d4f, #272a2b 85%, #1b1c1d);
-    background-image: -ms-linear-gradient(#4a4d4f, #272a2b 85%, #1b1c1d);
-    background-image: linear-gradient(#4a4d4f, #272a2b 85%, #1b1c1d);
+    display: flex;
+    align-items: center;
 }
-
 .eea-square-connect-btn span:before {
     content: '';
     display: block;
-    position: absolute;
-    left: 7px;
-    top: 16px;
     width: 24px;
     height: 24px;
-    margin-top: -12px;
+    margin-inline-end: .5rem;
     background-repeat: no-repeat;
     background-size: 22px 22px;
-}
-
-.eea-square-connect-btn:active span {
-    color: #e7e7e7;
-
-    -moz-box-shadow: inset 0 1px 0 rgba(0,0,0,0.1);
-    -webkit-box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.1);
-    box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.1);
-
-    background: #272a2b;
-    background-image: -webkit-linear-gradient(#272a2b, #272a2b 85%, #1b1c1d);
-    background-image: -moz-linear-gradient(#272a2b, #272a2b 85%, #1b1c1d);
-    background-image: -ms-linear-gradient(#272a2b, #272a2b 85%, #1b1c1d);
-    background-image: linear-gradient(#272a2b, #272a2b 85%, #1b1c1d);
-}
-
-
-/** Square disconnect button **/
-.eea-square-connect-btn.light {
-    -moz-box-shadow: 0 1px 0 rgba(0,0,0,0.1);
-    -webkit-box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
-    margin-left: 20px;
-
-    background: #b5c3d8;
-    background-image: -webkit-linear-gradient(#b5c3d8, #9cabc2);
-    background-image: -moz-linear-gradient(#b5c3d8, #9cabc2);
-    background-image: -ms-linear-gradient(#b5c3d8, #9cabc2);
-    background-image: linear-gradient(#b5c3d8, #9cabc2);
-}
-
-.eea-square-connect-btn.light span {
-    color: #283C4F;
-    text-shadow: 0 1px rgba(255, 255, 255, 0.8);
-
-    -moz-box-shadow: inset 0 1px 0 #fff;
-    -webkit-box-shadow: inset 0 1px 0 #fff;
-    box-shadow: inset 0 1px 0 #fff;
-
-    background: #f0f5fa;
-    background-image: -webkit-linear-gradient(#f0f5fa, #e4ecf5 85%, #e7eef6);
-    background-image: -moz-linear-gradient(#f0f5fa, #e4ecf5 85%, #e7eef6);
-    background-image: -ms-linear-gradient(#f0f5fa, #e4ecf5 85%, #e7eef6);
-    background-image: linear-gradient(#f0f5fa, #e4ecf5 85%, #e7eef6);
-}
-
-.eea-square-connect-btn.light:active {
-    background: #9babc2;
-}
-
-.eea-square-connect-btn.light:active span {
-    color: #283C4F;
-    text-shadow: 0 1px rgba(255, 255, 255, 0.8);
-
-    -moz-box-shadow: inset 0 1px 0 rgba(0,0,0,0.05);
-    -webkit-box-shadow: inset 0 1px 0 rgba(0,0,0,0.05);
-    box-shadow: inset 0 1px 0 rgba(0,0,0,0.05);
-
-    background: #d7dee8;
-    background-image: -webkit-linear-gradient(#d7dee8, #e7eef6);
-    background-image: -moz-linear-gradient(#d7dee8, #e7eef6);
-    background-image: -ms-linear-gradient(#d7dee8, #e7eef6);
-    background-image: linear-gradient(#d7dee8, #e7eef6);
-}
-
-
-/** Square images **/
-.eea-square-connect-btn span:before {
     background-image: url("../lib/square-oauth-logo-w.png");
-}
-
-.eea-square-connect-btn.light span:before {
-    background-image: url("../lib/square-oauth-logo-b.png");
 }
 
 
@@ -152,72 +71,28 @@
     .eea-square-connect-btn span:before{
         background-image: url("../lib/square-oauth-logo-w.png");
     }
-
-    .eea-square-connect-btn.light span:before {
-        background-image: url("../lib/square-oauth-logo-b.png");
-    }
 }
 
 
 /** Connection information text **/
 .eea-square-connected-ico {
-    height: 28px;
-    margin-bottom: -5px;
+    height: 2rem;
+    width: 2rem;
 }
 
 .eea-square-connected-txt {
-    color: #46be74;
+    color: var(--ee-status-color-green);
     font-size: 14px;
     font-weight: bold;
 }
 
 .eea-square-test-connected-txt {
-    color: #f504b1;
+    color: var(--ee-status-color-orange);
     font-size: 14px;
     font-weight: bold;
+    margin-inline-end: .7rem;
 }
 
-
-/** Register Domain button **/
-.eea-register-domain-btn {
-    display: inline-block;
-    margin-bottom: 1px;
-    cursor: pointer;
-    -webkit-font-smoothing: antialiased;
-    border: 0;
-    padding: 0 12px;
-    height: 30px;
-
-    font-size: 14px;
-    line-height: 30px;
-    color: white;
-    font-weight: bold;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.4);
-
-    -moz-border-radius: 4px;
-    -webkit-border-radius: 4px;
-    border-radius: 4px;
-
-    -moz-box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
-    -webkit-box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
-
-    background-image: -webkit-linear-gradient(#4a4d4f, #272a2b 85%, #1b1c1c);
-    background-image: -moz-linear-gradient(#4a4d4f, #272a2b 85%, #1b1c1c);
-    background-image: -ms-linear-gradient(#4a4d4f, #272a2b 85%, #1b1c1c);
-    background-image: linear-gradient(#4a4d4f, #272a2b 85%, #1b1c1c);
-}
-.eea-register-domain-btn:active {
-    color: #e7e7e7;
-
-    -moz-box-shadow: inset 0 1px 0 rgba(0,0,0,0.1);
-    -webkit-box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.1);
-    box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.1);
-
-    background: #272a2b;
-    background-image: -webkit-linear-gradient(#272a2b, #272a2b 85%, #1b1c1d);
-    background-image: -moz-linear-gradient(#272a2b, #272a2b 85%, #1b1c1d);
-    background-image: -ms-linear-gradient(#272a2b, #272a2b 85%, #1b1c1d);
-    background-image: linear-gradient(#272a2b, #272a2b 85%, #1b1c1d);
+#sandbox-mode-disabled-notice {
+    margin-block-start: .25rem;
 }

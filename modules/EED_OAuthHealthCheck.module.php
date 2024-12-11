@@ -9,7 +9,7 @@ use EventEspresso\Square\domain\Domain;
  *
  * @author  Nazar Kolivoshka
  * @package EventEspresso\Square\modules
- * @since   1.0.3.p
+ * @since   $VID:$
  */
 class EED_OAuthHealthCheck extends EED_Module
 {
@@ -19,7 +19,18 @@ class EED_OAuthHealthCheck extends EED_Module
      */
     public function run($WP)
     {
-        // The health check admin notice.
+    }
+
+
+    /**
+     * For hooking into EE Core, other modules, etc
+     *
+     * @access public
+     * @return void
+     */
+    public static function set_hooks()
+    {
+        // Health check cron event.
         self::scheduleCronEvents();
     }
 
@@ -32,6 +43,8 @@ class EED_OAuthHealthCheck extends EED_Module
      */
     public static function set_hooks_admin()
     {
+        // Health check cron event.
+        self::scheduleCronEvents();
         // oAuth health check admin notice.
         add_action('admin_notices', [__CLASS__, 'adminNotice']);
     }
@@ -79,7 +92,7 @@ class EED_OAuthHealthCheck extends EED_Module
                  ),
                  '<strong>',
                  '</strong>',
-                 '<a href="' . $pm_settings_page. '">',
+                 '<a href="' . $pm_settings_page . '">',
                  '</a>'
              )
              . '</p></div>';
@@ -93,7 +106,7 @@ class EED_OAuthHealthCheck extends EED_Module
      * @throws EE_Error
      * @throws ReflectionException
      */
-    public static function scheduledHealthCheck()
+    public static function scheduledHealthCheck(): void
     {
         // Get all active Square payment methods, as with payment methods pro you can activate few.
         $user_id = get_current_user_id();
@@ -102,17 +115,12 @@ class EED_OAuthHealthCheck extends EED_Module
             [['PMD_slug' => ['LIKE', '%square%']]]
         );
         foreach ($active_payment_methods as $payment_method) {
-            $square_data = $payment_method->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true, []);
-            if (isset($square_data[ Domain::META_KEY_USING_OAUTH ])
-                && $square_data[ Domain::META_KEY_USING_OAUTH ]
-            ) {
-                // First check the token and refresh if it's time to.
-                self::checkAndRefreshToken($payment_method);
-                // Check the credentials and the API connection.
+            if (EED_SquareOnsiteOAuth::isAuthenticated($payment_method)) {
+                // Check the token and the API connection.
                 $oauth_health_check = self::check($payment_method);
                 if (isset($oauth_health_check['error'])) {
                     // Try a force refresh.
-                    $refreshed = self::checkAndRefreshToken($payment_method, true);
+                    $refreshed = EED_SquareOnsiteOAuth::refreshToken($payment_method);
                     // If we still have an error display it to the admin and continue using the "old" oauth key.
                     if (! $refreshed) {
                         // Add an admin notice.
@@ -130,30 +138,48 @@ class EED_OAuthHealthCheck extends EED_Module
     /**
      * Checks if the OAuth credentials are still healthy and that we are authorized.
      *
-     * @param  EE_Payment_Method $pmInstance
+     * @param EE_Payment_Method $pm_instance
      * @return array ['healthy' => true] | ['error' => ['message' => 'the_message', 'code' => 'the_code']]
+     * @throws Exception
      */
-    public static function check(EE_Payment_Method $pmInstance): array
+    public static function check(EE_Payment_Method $pm_instance): array
     {
-        $error = [
-            'error' => [
-                'code'    => 'NO_ACCESS_TOKEN',
-                'message' => esc_html__('One or more authentication parameters are missing', 'event_espresso')
-            ]
-        ];
-        // Double check main oAuth parameters.
         try {
-            $access_token = $pmInstance->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, '');
-            $app_id       = $pmInstance->get_extra_meta(Domain::META_KEY_APPLICATION_ID, true, '');
-        } catch (EE_Error | ReflectionException $e) {
-            return $error;
+            // Check the token.
+            if (EED_OAuthHealthCheck::isTokenDue($pm_instance)) {
+                $refreshed = EED_SquareOnsiteOAuth::refreshToken($pm_instance);
+                if (! $refreshed) {
+                    return [
+                        'error' => [
+                            'code'    => 'REFRESH_FAIL',
+                            'message' => esc_html__('Could not refresh the token', 'event_espresso')
+                        ]
+                    ];
+                }
+            }
+        } catch (Exception $e) {
+            return [
+                'error' => [
+                    'code'    => 'EXCEPTION_THROWN',
+                    'message' => $e->getMessage()
+                ]
+            ];
         }
-        if (! $access_token || ! $app_id) {
-            return $error;
-        }
+        // Check the API requests. (disabled because of error suspicions on the client side)
+        return EED_OAuthHealthCheck::APIHealthCheck($pm_instance);
+    }
 
-        // Request a list of locations to check API requests.
-        $locations = EED_SquareOnsiteOAuth::getMerchantLocations($pmInstance);
+
+    /**
+     * Do an API health check by sending a request and checking for a correct response.
+     *
+     * @param EE_Payment_Method $pm_instance
+     * @return array
+     * @throws Exception
+     */
+    public static function APIHealthCheck(EE_Payment_Method $pm_instance): array
+    {
+        $locations = EED_SquareOnsiteOAuth::getMerchantLocations($pm_instance);
         if (is_array($locations) && isset($locations['error'])) {
             switch ($locations['error']['code']) {
                 case 'ACCESS_TOKEN_EXPIRED':
@@ -173,33 +199,22 @@ class EED_OAuthHealthCheck extends EED_Module
     /**
      * Checks if the token can/should be refreshed and requests a new one if required.
      *
-     * @param EE_Payment_Method $squarePm
-     * @param bool $forceRefresh
+     * @param EE_Payment_Method $square_pm
      * @return boolean
      * @throws EE_Error
      * @throws ReflectionException
      * @throws Exception
      */
-    public static function checkAndRefreshToken(EE_Payment_Method $squarePm, bool $forceRefresh = false): bool
+    public static function isTokenDue(EE_Payment_Method $square_pm): bool
     {
-        // Check if OAuthed first.
-        if (EED_SquareOnsiteOAuth::isAuthenticated($squarePm)) {
-            // Is this a force refresh ?
-            if ($forceRefresh) {
-                return EED_SquareOnsiteOAuth::refreshToken($squarePm);
-            }
-
-            // Check the token's validation date.
-            $now = new DateTime('now');
-            $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
-            if (! empty($squareData[ Domain::META_KEY_EXPIRES_AT ])) {
-                $expiresAt = new DateTime($squareData[ Domain::META_KEY_EXPIRES_AT ]);
-                $daysLeft  = $now->diff($expiresAt)->format('%a');
-
-                // Refresh the token on a 6th day or up, assuming that expiration frame in 30 days.
-                if (intval($daysLeft) <= 24) {
-                    return EED_SquareOnsiteOAuth::refreshToken($squarePm);
-                }
+        // Check the token's validation date.
+        $square_data = $square_pm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
+        if (! empty($square_data[ Domain::META_KEY_EXPIRES_AT ])) {
+            $expires_at = strtotime($square_data[ Domain::META_KEY_EXPIRES_AT ]);
+            $days_left  = floor(($expires_at - time()) / (60 * 60 * 24));
+            // Refresh the token on a 6th day or up, assuming that expiration frame in 30 days.
+            if (intval($days_left) <= 24) {
+                return true;
             }
         }
         return false;

@@ -2,7 +2,10 @@
 
 namespace EventEspresso\Square\api;
 
+use EE_Error;
+use EED_SquareOnsiteOAuth;
 use EventEspresso\Square\domain\Domain;
+use ReflectionException;
 
 /**
  * Class SquareApi
@@ -15,7 +18,6 @@ use EventEspresso\Square\domain\Domain;
  */
 class SquareApi
 {
-
     /**
      * Square Access Token that is used to process payments.
      *
@@ -149,15 +151,13 @@ class SquareApi
         if ($this->response_handler->isInvalid()) {
             return $this->response_handler->errors();
         }
-        // Ok, get the response data.
-        $apiResponse = json_decode($requestResult['body']);
         // Any errors ?
-        $this->response_handler->checkForResponseErrors($apiResponse);
+        $this->response_handler->checkForResponseErrors($requestResult);
         if ($this->response_handler->isInvalid()) {
             return $this->response_handler->errors();
         }
         // Ok, the response seems to be just right. Return the data.
-        return $apiResponse;
+        return json_decode($requestResult['body']);
     }
 
 

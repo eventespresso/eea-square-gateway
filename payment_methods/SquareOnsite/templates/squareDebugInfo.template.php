@@ -1,6 +1,5 @@
-<?php if (! defined('EVENT_ESPRESSO_VERSION')) {
-    exit('No direct script access allowed');
-} ?>
+<?php
+?>
 
 <div id="square-sandbox-panel" class="sandbox-panel">
     <h6 class="important-notice">

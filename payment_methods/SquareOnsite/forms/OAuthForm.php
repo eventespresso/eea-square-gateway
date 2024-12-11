@@ -129,55 +129,52 @@ class OAuthForm extends EE_Form_Section_Proper
             'eea-square-test-connected-txt'
         );
 
+
+        // Are we OAuth'ed ?
+        $display_connect = $isOauthed ? ' square-connect-hidden' : '';
+        $display_disconnect = $isOauthed ? '' : ' square-connect-hidden';
+
         // Section to be displayed if not connected.
-        $subsections['square_connect_btn'] = new EE_Form_Section_HTML(
+        $subsections['square_connect_section'] = new EE_Form_Section_HTML(
             EEH_HTML::tr(
                 $fieldHeading .
                 EEH_HTML::td(
-                    EEH_HTML::link(
-                        '#',
-                        EEH_HTML::span($this->oauthBtnText),
-                        '',
-                        'eea_square_connect_btn_' . $this->pmSlug,
-                        'eea-square-connect-btn'
+                    EEH_HTML::div(
+                        EEH_HTML::link(
+                            '#',
+                            EEH_HTML::span($this->oauthBtnText),
+                            '',
+                            'eea_square_connect_btn_' . $this->pmSlug,
+                            'button button--accent eea-square-connect-btn'
+                        ),
+                        "eea_square_connect_$this->pmSlug",
+                        "square-connections-section-div eea-connect-section-{$this->pmSlug}$display_connect"
                     )
-                ),
-                'eea_square_connect_' . $this->pmSlug,
-                'eea-connect-section-' . $this->pmSlug,
-                // Are we OAuth'ed ?
-                $isOauthed ? 'display:none;' : ''
-            )
-        );
-
-        // Section to be displayed when connected.
-        $subsections['square_disconnect_btn'] = new EE_Form_Section_HTML(
-            EEH_HTML::tr(
-                $fieldHeading
-                . EEH_HTML::td(
-                    EEH_HTML::img(
-                        EEA_SQUARE_GATEWAY_PLUGIN_URL . 'assets' . DS . 'lib' . DS . 'square-connected.png',
-                        '',
-                        'eea_square_connected_ico',
-                        'eea-square-connected-ico'
-                    )
-                    . EEH_HTML::strong(
-                        esc_html__('Connected.', 'event_espresso'),
-                        'eea_square_connected_txt_' . $this->pmSlug,
-                        'eea-square-connected-txt'
-                    )
-                    . $oauthedSandboxSection
-                    . EEH_HTML::link(
-                        '#',
-                        EEH_HTML::span(esc_html__('Disconnect', 'event_espresso')),
-                        '',
-                        'eea_square_disconnect_btn_' . $this->pmSlug,
-                        'eea-square-connect-btn light'
-                    )
-                ),
-                'eea_square_disconnect_' . $this->pmSlug,
-                'eea-disconnect-section-' . $this->pmSlug,
-                // Are we OAuth'ed ?
-                ! $isOauthed ? 'display:none;' : ''
+                    . EEH_HTML::div(
+                        EEH_HTML::img(
+                            EEA_SQUARE_GATEWAY_PLUGIN_URL . 'assets' . DS . 'lib' . DS . 'square-connected.png',
+                            '',
+                            'eea_square_connected_ico',
+                            'eea-square-connected-ico'
+                        )
+                        . EEH_HTML::strong(
+                            esc_html__('Connected.', 'event_espresso'),
+                            'eea_square_connected_txt_' . $this->pmSlug,
+                            'eea-square-connected-txt'
+                        )
+                        . $oauthedSandboxSection
+                        . EEH_HTML::link(
+                            '#',
+                            EEH_HTML::span(esc_html__('Disconnect', 'event_espresso')),
+                            '',
+                            'eea_square_disconnect_btn_' . $this->pmSlug,
+                            'button button--secondary eea-square-connect-btn'
+                        ),
+                        "eea_square_disconnect_$this->pmSlug",
+                        "square-connections-section-div eea-disconnect-section-{$this->pmSlug}$display_disconnect"
+                    ),
+                    'square-connections-section-tr'
+                )
             )
         );
 

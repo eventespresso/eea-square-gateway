@@ -20,7 +20,6 @@ use ReflectionException;
  */
 class PaymentApi
 {
-
     /**
      * @var SquareApi
      */

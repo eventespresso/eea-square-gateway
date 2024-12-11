@@ -15,7 +15,6 @@ use EventEspresso\Square\domain\Domain;
  */
 class EEG_SquareOnsite extends EE_Onsite_Gateway
 {
-
     /**
      * Square Application ID used in API calls.
      * @var string
@@ -66,11 +65,9 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
 
 
     /**
-     * Process the payment.
-     *
-     * @param EEI_Payment $payment
-     * @param array|null  $billing_info
-     * @return EE_Payment|EEI_Payment
+     * @param EE_Payment|null $payment
+     * @param array|null $billing_info
+     * @return EE_Payment
      * @throws EE_Error
      * @throws ReflectionException
      */
@@ -228,7 +225,12 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
 
         // If it's an array - it's an error. So pass that message further.
         if (is_array($payment_response) && isset($payment_response['error'])) {
-            return $this->setPaymentStatus($payment, $payment_status['declined'], '', $payment_response['error']['message']);
+            return $this->setPaymentStatus(
+                $payment,
+                $payment_status['declined'],
+                $payment_response['error'],
+                $payment_response['error']['message']
+            );
         }
 
         $payment_mgs = esc_html__('Unrecognized Error.', 'event_espresso');
@@ -300,7 +302,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      * @throws EE_Error
      */
     public function setPaymentStatus(
-        EEI_Payment $payment,
+        EE_Payment $payment,
         string $status,
         $responseData,
         string $errMessage,
@@ -329,12 +331,12 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
      * Some currencies have no subunits, so leave them in the currency's main units.
      *
      * @param float $amount
-     * @return float in the currency's smallest unit (e.g., pennies)
+     * @return int in the currency's smallest unit (e.g., pennies)
      */
-    public function convertToSubunits(float $amount): float
+    public function convertToSubunits(float $amount): int
     {
         $decimals = EE_PMT_SquareOnsite::getDecimalPlaces();
-        return round($amount * pow(10, $decimals), $decimals);
+        return (int) (round($amount, $decimals) * pow(10, $decimals));
     }
 
 
@@ -353,11 +355,11 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
     /**
      * Gets and saves some basic payment details.
      *
-     * @param EEI_Payment $eePayment
+     * @param EE_Payment $eePayment
      * @param stdClass $squarePayment
      * @return void
      */
-    public function savePaymentDetails(EEI_Payment $eePayment, stdClass $squarePayment)
+    public function savePaymentDetails(EE_Payment $eePayment, stdClass $squarePayment)
     {
         // Save payment ID.
         $eePayment->set_txn_id_chq_nmbr($squarePayment->id);
@@ -415,51 +417,51 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
     /**
      * Get Square Order ID.
      *
-     * @param EEI_Payment     $payment
-     * @param EEI_Transaction $transaction
+     * @param EE_Payment     $payment
+     * @param EE_Transaction $transaction
      * @param array           $payment_status
      * @param string          $customer_id
      * @return string
      */
     public function getOrderId(
-        EEI_Payment $payment,
-        EEI_Transaction $transaction,
+        EE_Payment $payment,
+        EE_Transaction $transaction,
         array $payment_status,
         string $customer_id
     ): string {
         // Do we already have an order ID ?
         $order_id = $transaction->get_extra_meta('order_id', true, false);
-        if (! $order_id) {
-            // Create an Order for this transaction.
-            try {
-                $create_order_api = $this->getCreateOrderApi($payment);
-                $order            = $create_order_api->create($payment, $customer_id);
-                if (is_array($order) && isset($order['error'])) {
-                    $error_message = (string) $order['error']['message'];
-                    $order_error = esc_html__('No order created !', 'event_espresso');
-                    return $this->setPaymentStatus($payment, $payment_status['failed'], $order_error, $error_message);
-                }
-                $order_id = $order->id;
-                // Associate the Order with this transaction.
-                $transaction->add_extra_meta('order_id', $order_id);
-                $transaction->add_extra_meta('order_version', $order->version);
-                return $order_id;
-            } catch (EE_Error | ReflectionException $e) {
-                return '';
-            }
+        if ($order_id) {
+            return $order_id;
         }
-        return '';
+        // Create an Order for this transaction.
+        try {
+            $create_order_api = $this->getCreateOrderApi($payment);
+            $order            = $create_order_api->create($payment, $customer_id);
+            if (is_array($order) && isset($order['error'])) {
+                $error_message = (string) $order['error']['message'];
+                $order_error = esc_html__('No order created !', 'event_espresso');
+                return $this->setPaymentStatus($payment, $payment_status['failed'], $order_error, $error_message);
+            }
+            $order_id = $order->id;
+            // Associate the Order with this transaction.
+            $transaction->add_extra_meta('order_id', $order_id);
+            $transaction->add_extra_meta('order_version', $order->version);
+            return $order_id;
+        } catch (EE_Error | ReflectionException $e) {
+            return '';
+        }
     }
 
 
     /**
      * Get Square Customer ID.
      *
-     * @param EEI_Transaction $transaction
+     * @param EE_Transaction $transaction
      * @param                 $billing_info
      * @return string
      */
-    public function getCustomerId(EEI_Transaction $transaction, $billing_info): string
+    public function getCustomerId(EE_Transaction $transaction, $billing_info): string
     {
         // Do we already have a Customer ID for this transaction ?
         $customer_id = $transaction->get_extra_meta('customer_id', true, '');
@@ -474,7 +476,7 @@ class EEG_SquareOnsite extends EE_Onsite_Gateway
                 if (is_object($customer)) {
                     $customer_id = $customer->id;
                 }
-            } else if (is_array($found_customer) && ! empty($found_customer[0]->id)) {
+            } elseif (is_array($found_customer) && ! empty($found_customer[0]->id)) {
                 // Customer already exists. Need only one.
                 $customer_id = $found_customer[0]->id;
             }

@@ -12,7 +12,6 @@ namespace EventEspresso\Square\api;
  */
 class IdempotencyKey
 {
-
     /**
      * @var string
      */

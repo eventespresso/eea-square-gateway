@@ -1,6 +1,7 @@
 <?php
 
 use EventEspresso\core\services\loaders\LoaderFactory;
+use EventEspresso\PaymentMethods\Manager;
 use EventEspresso\Square\api\domains\DomainsApi;
 use EventEspresso\Square\api\locations\LocationsApi;
 use EventEspresso\Square\api\SquareApi;
@@ -47,7 +48,13 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function set_hooks()
     {
-        if (EE_Maintenance_Mode::instance()->models_can_query()) {
+        if (
+            (
+                class_exists('EventEspresso\core\domain\services\database\DbStatus')
+                && EventEspresso\core\domain\services\database\DbStatus::isOnline()
+            )
+            || EE_Maintenance_Mode::instance()->models_can_query()
+        ) {
             // A hook to handle the process after the return from Square website.
             add_action('init', [__CLASS__, 'requestAccess'], 20);
         }
@@ -62,7 +69,13 @@ class EED_SquareOnsiteOAuth extends EED_Module
      */
     public static function set_hooks_admin()
     {
-        if (EE_Maintenance_Mode::instance()->models_can_query()) {
+        if (
+            (
+                class_exists('EventEspresso\core\domain\services\database\DbStatus')
+                && EventEspresso\core\domain\services\database\DbStatus::isOnline()
+            )
+            || EE_Maintenance_Mode::instance()->models_can_query()
+        ) {
             // Request Square initial OAuth data.
             add_action('wp_ajax_squareRequestConnectData', [__CLASS__, 'getConnectionData']);
             // Update the OAuth status.
@@ -80,7 +93,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * This will handle the user return from the Square authentication page.
      *
      * We expect them to return to a page like:
-     * /?webhook_action=eea_square_grab_access_token&access_token=123qwe&nonce=qwe123&refresh_token=123qwe&application_id=123qwe&square_slug=square1&square_user_id12345&livemode=1
+     * /?webhook=eepSquareGetAccessToken&access_token=123qwe&nonce=qwe123&refresh_token=123qwe&application_id=123qwe&square_slug=square1&square_user_id12345&livemode=1
      *
      * @return void
      * @throws InvalidArgumentException
@@ -93,8 +106,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
     {
         // Check if this is the webhook from Square.
         if (
-            ! isset($_GET['webhook_action'], $_GET['nonce'])
-            || $_GET['webhook_action'] !== 'eea_square_grab_access_token'
+            ! isset($_GET['webhook'], $_GET['nonce'])
+            || $_GET['webhook'] !== 'eepSquareGetAccessToken'
         ) {
             // Not it. Ignore it.
             return;
@@ -112,7 +125,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         }
 
         // Check that we have all the required parameters and the nonce is ok.
-        if (! wp_verify_nonce($_GET['nonce'], 'eea_square_grab_access_token')) {
+        if (! wp_verify_nonce($_GET['nonce'], 'eepSquareGetAccessToken')) {
             // This is an error. Log and close the window.
             $err_msg = esc_html__('Nonce fail!', 'event_espresso');
             EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $err_msg, [], true, true);
@@ -149,7 +162,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         );
         /**
          * Save the permissions scope. Used for checking the permissions before using the API.
-         * @since 1.0.3.p
+         * @since $VID:$
          */
         $square_pm->update_extra_meta(Domain::META_KEY_PERMISSIONS, Domain::PERMISSIONS_SCOPE_ALL);
 
@@ -201,11 +214,11 @@ class EED_SquareOnsiteOAuth extends EED_Module
         ) {
             $square->save(['PMD_debug_mode' => $_POST['debugMode']]);
         }
-        $nonce = wp_create_nonce('eea_square_grab_access_token');
+        $nonce = wp_create_nonce('eepSquareGetAccessToken');
         // OAuth return handler.
         $redirect_uri = add_query_arg(
             [
-                'webhook_action'           => 'eea_square_grab_access_token',
+                'webhook'                  => 'eepSquareGetAccessToken',
                 'square_slug'              => $square_slug,
                 'nonce'                    => $nonce,
                 Domain::META_KEY_LIVE_MODE => $square->debug_mode() ? '0' : '1',
@@ -216,9 +229,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
         // https://connect.eventespresso.dev/squarepayments/forward?return_url=http%253A%252F%252Fsrc.wordpress-develop.dev%252Fwp-admin%252Fadmin.php%253Fpage%253Dwc-settings%2526amp%253Btab%253Dintegration%2526amp%253Bsection%253Dsquareconnect%2526amp%253Bwc_square_token_nonce%253D6585f05708&scope=read_write
         $request_url = add_query_arg(
             [
-                'return_url' => rawurlencode($redirect_uri),
-                'scope'      => urlencode(Domain::PERMISSIONS_SCOPE_ALL),
-                'modal'      => true
+                'return_url'  => rawurlencode($redirect_uri),
+                'api_version' => Domain::SQUARE_API_VERSION,
+                'scope'       => urlencode(Domain::PERMISSIONS_SCOPE_ALL),
+                'modal'       => true
             ],
             EED_SquareOnsiteOAuth::getMiddlemanBaseUrl($square) . 'forward'
         );
@@ -372,7 +386,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             ],
         ];
         if (defined('LOCAL_MIDDLEMAN_SERVER')) {
-            $postArgs['sslverify'] = false;
+            $postArgs['sslverify'] = Manager::verifySSL();
         }
         $postUrl = EED_SquareOnsiteOAuth::getMiddlemanBaseUrl($squarePm) . 'deauthorize';
         // POST https://connect.eventespresso.dev/square/deauthorize
@@ -434,10 +448,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $response = EED_SquareOnsiteOAuth::registerDomain($square_pm);
         if (! empty($response['error'])) {
             // did we get an error ?
-            EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $response['error'], true, true);
+            EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $response['error'], [], true, true);
         } elseif (empty($response['status'])) {
             $error = esc_html__('Sorry, something went wrong. Got a bad response.', 'event_espresso');
-            EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $error, true, true);
+            EED_SquareOnsiteOAuth::errorLogAndExit($square_pm, $error, [], true, true);
         }
         // if we got here, all should be good
         echo wp_json_encode($response);
@@ -472,7 +486,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         // log
         $square_pm->type_obj()->get_gateway()->log(
             ['Domain registration' => json_encode($api_response)],
-            'Payment_Method'
+            $square_pm
         );
         if (is_wp_error($api_response)) {
             return ['error' => $api_response->get_error_message()];
@@ -514,8 +528,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             $squareData[ Domain::META_KEY_REFRESH_TOKEN ],
             $squarePm->debug_mode()
         );
-        $nonce = wp_create_nonce('eea_square_refresh_access_token');
-
+        $nonce = wp_create_nonce('eepSquareRefreshAccessToken');
         // Try refreshing the token.
         $postArgs = [
             'method'      => 'POST',
@@ -529,14 +542,12 @@ class EED_SquareOnsiteOAuth extends EED_Module
             ],
         ];
         if (defined('LOCAL_MIDDLEMAN_SERVER')) {
-            $postArgs['sslverify'] = false;
+            $postArgs['sslverify'] = Manager::verifySSL();
         }
         $postUrl = EED_SquareOnsiteOAuth::getMiddlemanBaseUrl($squarePm) . 'refresh';
-
         // POST https://connect.eventespresso.dev/square/refresh
         // Request the new token.
         $response = wp_remote_post($postUrl, $postArgs);
-
         if (is_wp_error($response)) {
             EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $response->get_error_message(), [], false);
             return false;
@@ -549,18 +560,14 @@ class EED_SquareOnsiteOAuth extends EED_Module
                     && strpos($responseBody->error_description, 'This application is not connected') === false
                 )
             ) {
-                if (isset($responseBody->error_description)) {
-                    $errMsg = $responseBody->error_description;
-                } else {
-                    $errMsg = esc_html__('Unknown response received!', 'event_espresso');
-                }
+                $errMsg = $responseBody->error_description ??
+                          esc_html__('Unknown response received!', 'event_espresso');
                 EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, (array) $response, false);
                 return false;
             }
-
             if (
                 empty($responseBody->nonce)
-                || ! wp_verify_nonce($responseBody->nonce, 'eea_square_refresh_access_token')
+                || ! wp_verify_nonce($responseBody->nonce, 'eepSquareRefreshAccessToken')
                 || empty($responseBody->expires_at)
                 || empty($responseBody->application_id)
                 || empty($responseBody->access_token)
@@ -572,7 +579,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 EED_SquareOnsiteOAuth::errorLogAndExit($squarePm, $errMsg, (array) $responseBody, false);
                 return false;
             }
-
             // log the response, don't exit
             EED_SquareOnsiteOAuth::errorLogAndExit(
                 $squarePm,
@@ -580,7 +586,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 (array) $responseBody,
                 false
             );
-
             // Update the PM data.
             $squarePm->update_extra_meta(
                 Domain::META_KEY_APPLICATION_ID,
@@ -590,8 +595,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 Domain::META_KEY_ACCESS_TOKEN,
                 EED_SquareOnsiteOAuth::encryptString($responseBody->access_token, $squarePm->debug_mode())
             );
-
-
             $refresh_token = EED_SquareOnsiteOAuth::encryptString(
                 sanitize_text_field($responseBody->refresh_token),
                 $squarePm->debug_mode()
@@ -608,7 +611,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
                     Domain::META_KEY_LIVE_MODE     => $squarePm->debug_mode() ? '0' : '1',
                 ]
             );
-
             // Also refresh the locations list.
             $locationsList = EED_SquareOnsiteOAuth::updateLocationsList($squarePm);
             // Did we really get an error ?
@@ -621,7 +623,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 );
                 return false;
             }
-
             // And update the location ID if not set.
             EED_SquareOnsiteOAuth::updateLocation($squarePm, $locationsList);
         }
@@ -644,7 +645,6 @@ class EED_SquareOnsiteOAuth extends EED_Module
             // We got an error.
             return $locations;
         }
-
         // Get all the locations.
         $locationsList = [];
         foreach ($locations as $location) {
@@ -653,12 +653,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
                 $locationsList[ $location->id ] = $location->name;
             }
         }
-
         // And update the locations option/dropdown.
         $squareData = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         $squareData[ Domain::META_KEY_LOCATIONS_LIST ] = $locationsList;
         $squarePm->update_extra_meta(Domain::META_KEY_SQUARE_DATA, $squareData);
-
         return $locationsList;
     }
 
@@ -678,11 +676,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
         $location = $squarePm->get_extra_meta(Domain::META_KEY_LOCATION_ID, true);
         if (! $location || ! isset($locationsList[ $location ])) {
             reset($locationsList);
-            $defaultLocation = key($locationsList);
+            $defaultLocation = key($locationsList) ?? '';
             $squarePm->update_extra_meta(Domain::META_KEY_LOCATION_ID, $defaultLocation);
             return $defaultLocation;
         }
-
         return '';
     }
 
@@ -692,6 +689,8 @@ class EED_SquareOnsiteOAuth extends EED_Module
      *
      * @param EE_Payment_Method $pmInstance
      * @return Object|array
+     * @throws EE_Error
+     * @throws ReflectionException
      */
     public static function getMerchantLocations(EE_Payment_Method $pmInstance)
     {
@@ -722,18 +721,14 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @throws EE_Error
      * @throws ReflectionException
      */
-    public static function isAuthenticated($squarePm): bool
+    public static function isAuthenticated(EE_Payment_Method $squarePm): bool
     {
-        if (! $squarePm) {
-            return false;
-        }
         // access token ok ?
         $access_token = $squarePm->get_extra_meta(Domain::META_KEY_ACCESS_TOKEN, true, '');
         $square_data  = $squarePm->get_extra_meta(Domain::META_KEY_SQUARE_DATA, true);
         if (! $access_token || ! $square_data) {
             return false;
         }
-
         // now check if we can decrypt the token etc.
         $accessToken = EED_SquareOnsiteOAuth::decryptString($access_token, $squarePm->debug_mode());
         if (
@@ -806,7 +801,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
         foreach ($data as $key => $value) {
             $value = is_array($value) ? EED_SquareOnsiteOAuth::cleanDataArray($value) : $value;
             if (in_array($key, $sensitive_data)) {
-                $data[$key] = empty($value) ? '**empty**' : '**hidden**';
+                $data[ $key ] = empty($value) ? '**empty**' : '**hidden**';
             }
         }
         return $data;
@@ -821,9 +816,10 @@ class EED_SquareOnsiteOAuth extends EED_Module
      * @param array                     $data
      * @param bool                      $echo_json_and_exit Should we echo json and exit
      * @param bool                      $using_oauth
-     * @param bool                      $show_alert Tells frontend to show an alert or not
+     * @param bool                      $show_alert         Tells frontend to show an alert or not
      * @return bool
      * @throws EE_Error
+     * @throws ReflectionException
      */
     public static function errorLogAndExit(
         $square_pm,
@@ -842,7 +838,7 @@ class EED_SquareOnsiteOAuth extends EED_Module
             }
             $square_pm->type_obj()->get_gateway()->log(
                 [$default_msg => $err_msg],
-                'Payment_Method'
+                $square_pm
             );
         }
         // Do we echo json and exit ?

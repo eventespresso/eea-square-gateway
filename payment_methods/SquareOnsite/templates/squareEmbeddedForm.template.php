@@ -1,6 +1,4 @@
-<?php if (! defined('EVENT_ESPRESSO_VERSION')) {
-    exit('No direct script access allowed');
-}
+<?php
 
 /**
  * Square embedded payment form.
@@ -8,6 +6,7 @@
  * @package         Event Espresso
  * @subpackage      eea-square-gateway
  */
+
 ?>
 <div id="eea-square-pm-form-div">
     <!-- Apple Pay button -->

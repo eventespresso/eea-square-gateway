@@ -101,11 +101,9 @@ class SettingsForm extends EE_Payment_Method_Form
      * @return void
      * @throws EE_Error|ReflectionException
      */
-    public function validateConnection(EE_Payment_Method $pmInstance)
+    public function validateConnection(EE_Payment_Method $pmInstance): void
     {
-        if (isset($this->squareData[ Domain::META_KEY_USING_OAUTH ])
-            && $this->squareData[ Domain::META_KEY_USING_OAUTH ]
-        ) {
+        if (EED_SquareOnsiteOAuth::isAuthenticated($pmInstance)) {
             $user_id = get_current_user_id();
             // Check the credentials and the API connection.
             $oauth_health_check = EED_OAuthHealthCheck::check($pmInstance);
@@ -145,7 +143,8 @@ class SettingsForm extends EE_Payment_Method_Form
         $pmDebugMode = $pmInstance->debug_mode();
         $debugInput  = $this->get_input('PMD_debug_mode', false);
         // Do nothing if not connected.
-        if (! isset($this->squareData[ Domain::META_KEY_USING_OAUTH ])
+        if (
+            ! isset($this->squareData[ Domain::META_KEY_USING_OAUTH ])
             || ! $this->squareData[ Domain::META_KEY_USING_OAUTH ]
         ) {
             return;
@@ -197,7 +196,7 @@ class SettingsForm extends EE_Payment_Method_Form
 
         $debugInput->set_html_help_text(
             $debugInput->html_help_text()
-            . '</p><p class="disabled-description">'
+            . '</p><p id="sandbox-mode-disabled-notice" class="description">'
             . esc_html__(
                 'You cannot enable or disable debug mode while connected. First disconnect, then change debug mode.',
                 'event_espresso'
@@ -264,7 +263,7 @@ class SettingsForm extends EE_Payment_Method_Form
                 '</a>'
             ),
             'html_id'         => 'eea_apple_register_domain_' . $pmInstance->slug(),
-            'html_class'      => 'eea-register-domain-btn',
+            'html_class'      => 'eea-register-domain-btn button button--accent',
         ]);
         return $pmFormParams;
     }
@@ -348,7 +347,7 @@ class SettingsForm extends EE_Payment_Method_Form
             if (
                 empty($this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ])
                 || $this->squareData[ Domain::META_KEY_DOMAIN_VERIFY ] !== 'VERIFIED'
-            ){
+            ) {
                 $response = EED_SquareOnsiteOAuth::registerDomain($pmInstance);
                 if (! empty($response['status'])) {
                     // save the status

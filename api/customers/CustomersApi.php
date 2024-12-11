@@ -15,7 +15,7 @@ use ReflectionException;
  *
  * @author  Nazar Kolivoshka
  * @package EventEspresso\Square\api\customers
- * @since   1.0.3.p
+ * @since   $VID:$
  */
 class CustomersApi
 {

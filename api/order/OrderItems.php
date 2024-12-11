@@ -227,8 +227,17 @@ class OrderItems
     /**
      * @param float $total
      */
-    public function addToTotal(float $total)
+    public function addToTotal(float $total): void
     {
         $this->total += $total;
+    }
+
+
+    /**
+     * @param float $total
+     */
+    public function subtractFromTotal(float $total): void
+    {
+        $this->total -= $total;
     }
 }

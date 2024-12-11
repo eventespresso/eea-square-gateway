@@ -15,7 +15,13 @@ class Domain
     /**
      * Holds the Square API version used in this integration.
      */
-    public const SQUARE_API_VERSION = '2021-05-13';
+    public const SQUARE_API_VERSION = '2024-01-18';
+
+    public const CORE_VERSION_REQUIRED = '5.0.0.rc.002';
+
+    public const LICENSE_PLUGIN_ID = 0;
+    public const LICENSE_PLUGIN_NAME = 'Square Integration';
+    public const LICENSE_PLUGIN_SLUG = 'eep-square';
 
     /*
      * Holds the name of the health check fail admin notice.

@@ -14,7 +14,6 @@ use EventEspresso\Square\api\SquareApi;
  */
 class LocationsApi
 {
-
     /**
      * @var SquareApi
      */

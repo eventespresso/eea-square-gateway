@@ -41,7 +41,13 @@ class EED_SquareOnsite extends EED_Module
      */
     public static function set_hooks()
     {
-        if (EE_Maintenance_Mode::instance()->models_can_query()) {
+        if (
+            (
+                class_exists('EventEspresso\core\domain\services\database\DbStatus')
+                && EventEspresso\core\domain\services\database\DbStatus::isOnline()
+            )
+            || EE_Maintenance_Mode::instance()->models_can_query()
+        ) {
             // Cancel the Square order on abandoned/failed transactions.
             add_action(
                 'AHEE__EE_Cron_Tasks__process_expired_transactions__incomplete_transaction',
